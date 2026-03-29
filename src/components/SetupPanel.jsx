@@ -1,0 +1,224 @@
+import { useState } from 'react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import ThemePicker from './ThemePicker';
+
+export default function SetupPanel({
+  participantNames,
+  setParticipantNames,
+  bracketType,
+  setBracketType,
+  onGenerate,
+  theme,
+  themeName,
+  setThemeName,
+}) {
+  const validCount = participantNames.filter(n => n.trim()).length;
+
+  const handleNameChange = (index, value) => {
+    const newNames = [...participantNames];
+    newNames[index] = value;
+    setParticipantNames(newNames);
+  };
+
+  const addParticipant = () => {
+    setParticipantNames([...participantNames, '']);
+  };
+
+  const removeParticipant = (index) => {
+    if (participantNames.length <= 2) return;
+    setParticipantNames(participantNames.filter((_, i) => i !== index));
+  };
+
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+    const items = [...participantNames];
+    const [reordered] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reordered);
+    setParticipantNames(items);
+  };
+
+  const presets = [4, 8, 16, 32];
+
+  const handlePreset = (count) => {
+    const names = [];
+    for (let i = 0; i < count; i++) {
+      names.push(participantNames[i] || `Team ${i + 1}`);
+    }
+    setParticipantNames(names);
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto py-8">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold mb-2" style={{ color: theme.text }}>
+          Setup Your Tournament
+        </h2>
+        <p style={{ color: theme.textMuted }}>
+          Add participants, choose bracket type, and customize the look
+        </p>
+      </div>
+
+      {/* Bracket Type Toggle */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
+          Bracket Type
+        </label>
+        <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+          {[
+            { value: 'single', label: 'Single Elimination' },
+            { value: 'double', label: 'Double Elimination' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setBracketType(opt.value)}
+              className="flex-1 py-3 px-4 text-sm font-medium transition-all cursor-pointer"
+              style={{
+                background: bracketType === opt.value ? theme.accent : theme.cardBg,
+                color: bracketType === opt.value ? theme.winnerText : theme.text,
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Theme Picker */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
+          Color Theme
+        </label>
+        <ThemePicker themeName={themeName} setThemeName={setThemeName} currentTheme={theme} />
+      </div>
+
+      {/* Presets */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
+          Quick Presets
+        </label>
+        <div className="flex gap-2">
+          {presets.map(n => (
+            <button
+              key={n}
+              onClick={() => handlePreset(n)}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer"
+              style={{
+                background: participantNames.length === n ? theme.accent + '33' : theme.cardBg,
+                border: `1px solid ${participantNames.length === n ? theme.accent : theme.cardBorder}`,
+                color: theme.text,
+              }}
+            >
+              {n} Teams
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Participants List */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium" style={{ color: theme.textMuted }}>
+            Participants ({validCount})
+          </label>
+          <span className="text-xs" style={{ color: theme.textMuted }}>
+            Drag to reorder seeds
+          </span>
+        </div>
+
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="participants">
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="space-y-2"
+              >
+                {participantNames.map((name, index) => (
+                  <Draggable key={`p-${index}`} draggableId={`p-${index}`} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className="flex items-center gap-2 rounded-lg p-1 transition-shadow"
+                        style={{
+                          ...provided.draggableProps.style,
+                          background: snapshot.isDragging ? theme.accent + '22' : theme.cardBg,
+                          border: `1px solid ${snapshot.isDragging ? theme.accent : theme.cardBorder}`,
+                        }}
+                      >
+                        <div
+                          {...provided.dragHandleProps}
+                          className="flex items-center justify-center w-8 h-8 rounded cursor-grab shrink-0"
+                          style={{ color: theme.textMuted }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="9" cy="6" r="1.5" />
+                            <circle cx="15" cy="6" r="1.5" />
+                            <circle cx="9" cy="12" r="1.5" />
+                            <circle cx="15" cy="12" r="1.5" />
+                            <circle cx="9" cy="18" r="1.5" />
+                            <circle cx="15" cy="18" r="1.5" />
+                          </svg>
+                        </div>
+                        <span
+                          className="text-xs font-mono w-6 text-center shrink-0"
+                          style={{ color: theme.accent }}
+                        >
+                          {index + 1}
+                        </span>
+                        <input
+                          value={name}
+                          onChange={(e) => handleNameChange(index, e.target.value)}
+                          placeholder={`Team ${index + 1}`}
+                          className="flex-1 bg-transparent outline-none text-sm py-2 px-2"
+                          style={{ color: theme.text }}
+                        />
+                        <button
+                          onClick={() => removeParticipant(index)}
+                          className="w-8 h-8 flex items-center justify-center rounded hover:opacity-100 opacity-40 transition-opacity shrink-0 cursor-pointer"
+                          style={{ color: theme.text }}
+                          disabled={participantNames.length <= 2}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+
+        <button
+          onClick={addParticipant}
+          className="w-full mt-2 py-2 rounded-lg text-sm font-medium transition-all hover:scale-[1.01] cursor-pointer"
+          style={{
+            background: theme.cardBg,
+            border: `1px dashed ${theme.cardBorder}`,
+            color: theme.textMuted,
+          }}
+        >
+          + Add Participant
+        </button>
+      </div>
+
+      {/* Generate Button */}
+      <button
+        onClick={onGenerate}
+        disabled={validCount < 2}
+        className="w-full py-4 rounded-xl text-lg font-bold transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        style={{
+          background: theme.accent,
+          color: theme.winnerText,
+        }}
+      >
+        Generate Bracket ({validCount} participants)
+      </button>
+    </div>
+  );
+}
