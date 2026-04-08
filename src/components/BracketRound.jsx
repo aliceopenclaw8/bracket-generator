@@ -9,6 +9,7 @@ export default function BracketRound({
   onAdvanceWinner,
   bracketSection,
   label,
+  bracketStyle = 'boxed',
 }) {
   const roundLabel = label || getRoundLabel(roundIndex, totalRounds);
 
@@ -35,6 +36,7 @@ export default function BracketRound({
             theme={theme}
             onAdvanceWinner={onAdvanceWinner}
             bracketSection={bracketSection}
+            bracketStyle={bracketStyle}
           />
         ))}
       </div>

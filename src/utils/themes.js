@@ -1,4 +1,19 @@
 export const THEMES = {
+  bw: {
+    name: 'Black & White',
+    bg: '#ffffff',
+    cardBg: '#ffffff',
+    cardBorder: '#333333',
+    accent: '#000000',
+    text: '#000000',
+    textMuted: '#666666',
+    winnerBg: '#000000',
+    winnerText: '#ffffff',
+    roundLabel: '#000000',
+    connector: '#333333',
+    headerBg: '#ffffff',
+    preview: ['#ffffff', '#000000', '#666666', '#333333'],
+  },
   classic: {
     name: 'Classic',
     bg: '#1a1a2e',

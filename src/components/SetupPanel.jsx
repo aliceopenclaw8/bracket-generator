@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ThemePicker from './ThemePicker';
+import { shuffleArray } from '../utils/shuffle';
 
 export default function SetupPanel({
   participantNames,
   setParticipantNames,
   bracketType,
   setBracketType,
+  bracketStyle,
+  setBracketStyle,
+  layout,
+  setLayout,
   onGenerate,
   theme,
   themeName,
@@ -38,6 +43,7 @@ export default function SetupPanel({
   };
 
   const presets = [4, 8, 16, 32];
+  const [customCount, setCustomCount] = useState('');
 
   const handlePreset = (count) => {
     const names = [];
@@ -45,6 +51,21 @@ export default function SetupPanel({
       names.push(participantNames[i] || `Team ${i + 1}`);
     }
     setParticipantNames(names);
+    setCustomCount('');
+  };
+
+  const handleCustomCount = () => {
+    const count = parseInt(customCount, 10);
+    if (!count || count < 2 || count > 128) return;
+    const names = [];
+    for (let i = 0; i < count; i++) {
+      names.push(participantNames[i] || `Team ${i + 1}`);
+    }
+    setParticipantNames(names);
+  };
+
+  const handleRandomize = () => {
+    setParticipantNames(shuffleArray(participantNames));
   };
 
   return (
@@ -83,6 +104,58 @@ export default function SetupPanel({
         </div>
       </div>
 
+      {/* Bracket Style Toggle */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
+          Bracket Style
+        </label>
+        <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+          {[
+            { value: 'boxed', label: 'Boxed' },
+            { value: 'line', label: 'Line' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setBracketStyle(opt.value)}
+              className="flex-1 py-3 px-4 text-sm font-medium transition-all cursor-pointer"
+              style={{
+                background: bracketStyle === opt.value ? theme.accent : theme.cardBg,
+                color: bracketStyle === opt.value ? theme.winnerText : theme.text,
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Layout Toggle */}
+      {bracketType === 'single' && (
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
+            Layout
+          </label>
+          <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+            {[
+              { value: 'standard', label: 'Standard (Left to Right)' },
+              { value: 'double-sided', label: 'Double-Sided' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setLayout(opt.value)}
+                className="flex-1 py-3 px-4 text-sm font-medium transition-all cursor-pointer"
+                style={{
+                  background: layout === opt.value ? theme.accent : theme.cardBg,
+                  color: layout === opt.value ? theme.winnerText : theme.text,
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Theme Picker */}
       <div className="mb-6">
         <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
@@ -112,6 +185,34 @@ export default function SetupPanel({
             </button>
           ))}
         </div>
+        <div className="flex gap-2 mt-2">
+          <input
+            type="number"
+            min="2"
+            max="128"
+            value={customCount}
+            onChange={(e) => setCustomCount(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCustomCount()}
+            placeholder="Custom # of teams"
+            className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
+            style={{
+              background: theme.cardBg,
+              border: `1px solid ${theme.cardBorder}`,
+              color: theme.text,
+            }}
+          />
+          <button
+            onClick={handleCustomCount}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer"
+            style={{
+              background: theme.cardBg,
+              border: `1px solid ${theme.cardBorder}`,
+              color: theme.text,
+            }}
+          >
+            Set
+          </button>
+        </div>
       </div>
 
       {/* Participants List */}
@@ -120,9 +221,22 @@ export default function SetupPanel({
           <label className="text-sm font-medium" style={{ color: theme.textMuted }}>
             Participants ({validCount})
           </label>
-          <span className="text-xs" style={{ color: theme.textMuted }}>
-            Drag to reorder seeds
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleRandomize}
+              className="text-xs px-3 py-1 rounded-full font-medium transition-all hover:scale-105 cursor-pointer"
+              style={{
+                background: theme.accent + '15',
+                color: theme.accent,
+                border: `1px solid ${theme.accent}44`,
+              }}
+            >
+              Randomize
+            </button>
+            <span className="text-xs" style={{ color: theme.textMuted }}>
+              Drag to reorder seeds
+            </span>
+          </div>
         </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>

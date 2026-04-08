@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import BracketRound from './BracketRound';
 import BracketConnectors from './BracketConnectors';
 import { getRoundLabel } from '../utils/bracketLogic';
+import { splitBracketForDoubleSided } from '../utils/bracketLogic';
 
 function ChampionDisplay({ rounds, theme }) {
   const lastRound = rounds[rounds.length - 1];
@@ -39,7 +40,7 @@ function ChampionDisplay({ rounds, theme }) {
   );
 }
 
-function SingleBracket({ bracket, theme, onAdvanceWinner }) {
+function SingleBracket({ bracket, theme, onAdvanceWinner, bracketStyle }) {
   const containerRef = useRef(null);
 
   return (
@@ -55,6 +56,7 @@ function SingleBracket({ bracket, theme, onAdvanceWinner }) {
             theme={theme}
             onAdvanceWinner={onAdvanceWinner}
             bracketSection="winners"
+            bracketStyle={bracketStyle}
           />
         ))}
         <ChampionDisplay rounds={bracket.rounds} theme={theme} />
@@ -63,7 +65,77 @@ function SingleBracket({ bracket, theme, onAdvanceWinner }) {
   );
 }
 
-function DoubleBracket({ doubleBracket, theme, onAdvanceWinner }) {
+function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle }) {
+  const { west, east, finals } = splitBracketForDoubleSided(bracket.rounds);
+  const westRef = useRef(null);
+  const eastRef = useRef(null);
+
+  return (
+    <div className="flex items-stretch gap-0" style={{ padding: '20px 0' }}>
+      {/* West side (left to right) */}
+      <div className="relative flex items-stretch gap-0" ref={westRef}>
+        <BracketConnectors containerRef={westRef} rounds={west} theme={theme} />
+        {west.map((matches, roundIdx) => (
+          <BracketRound
+            key={`west-${roundIdx}`}
+            matches={matches}
+            roundIndex={roundIdx}
+            totalRounds={west.length}
+            theme={theme}
+            onAdvanceWinner={onAdvanceWinner}
+            bracketSection="winners"
+            bracketStyle={bracketStyle}
+            label={getRoundLabel(roundIdx, bracket.rounds.length)}
+          />
+        ))}
+      </div>
+
+      {/* Finals in the center */}
+      <div className="flex flex-col items-center justify-center shrink-0 mx-4" style={{ minWidth: '220px' }}>
+        <div
+          className="text-xs font-bold uppercase tracking-wider mb-3 px-3 py-1 rounded-full"
+          style={{ color: theme.accent, background: theme.accent + '15' }}
+        >
+          Finals
+        </div>
+        {finals.map((match) => (
+          <BracketRound
+            key={match.id}
+            matches={[match]}
+            roundIndex={0}
+            totalRounds={1}
+            theme={theme}
+            onAdvanceWinner={onAdvanceWinner}
+            bracketSection="winners"
+            bracketStyle={bracketStyle}
+            label=""
+          />
+        ))}
+        <ChampionDisplay rounds={[finals]} theme={theme} />
+      </div>
+
+      {/* East side (right to left, reversed order) */}
+      <div className="relative flex items-stretch gap-0 flex-row-reverse" ref={eastRef}>
+        <BracketConnectors containerRef={eastRef} rounds={east} theme={theme} />
+        {east.map((matches, roundIdx) => (
+          <BracketRound
+            key={`east-${roundIdx}`}
+            matches={matches}
+            roundIndex={roundIdx}
+            totalRounds={east.length}
+            theme={theme}
+            onAdvanceWinner={onAdvanceWinner}
+            bracketSection="winners"
+            bracketStyle={bracketStyle}
+            label={getRoundLabel(roundIdx, bracket.rounds.length)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle }) {
   const winnersRef = useRef(null);
   const losersRef = useRef(null);
 
@@ -90,6 +162,7 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner }) {
                 onAdvanceWinner={onAdvanceWinner}
                 bracketSection="winners"
                 label={getRoundLabel(roundIdx, doubleBracket.winnersRounds.length)}
+                bracketStyle={bracketStyle}
               />
             ))}
           </div>
@@ -117,6 +190,7 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner }) {
                 onAdvanceWinner={onAdvanceWinner}
                 bracketSection="losers"
                 label={`Losers R${roundIdx + 1}`}
+                bracketStyle={bracketStyle}
               />
             ))}
           </div>
@@ -140,6 +214,7 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner }) {
             onAdvanceWinner={onAdvanceWinner}
             bracketSection="grandFinals"
             label="Grand Finals"
+            bracketStyle={bracketStyle}
           />
         </div>
       </div>
@@ -147,7 +222,7 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner }) {
   );
 }
 
-export default function BracketView({ bracket, doubleBracket, bracketType, theme, title, logo, onAdvanceWinner }) {
+export default function BracketView({ bracket, doubleBracket, bracketType, bracketStyle, layout, theme, title, logo, onAdvanceWinner }) {
   return (
     <div
       className="rounded-2xl overflow-hidden"
@@ -177,11 +252,14 @@ export default function BracketView({ bracket, doubleBracket, bracketType, theme
 
       {/* Bracket Content */}
       <div className="p-6 overflow-x-auto bracket-scroll">
-        {bracketType === 'single' && bracket && (
-          <SingleBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} />
+        {bracketType === 'single' && bracket && layout === 'double-sided' && (
+          <DoubleSidedBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} bracketStyle={bracketStyle} />
+        )}
+        {bracketType === 'single' && bracket && layout !== 'double-sided' && (
+          <SingleBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} bracketStyle={bracketStyle} />
         )}
         {bracketType === 'double' && doubleBracket && (
-          <DoubleBracket doubleBracket={doubleBracket} theme={theme} onAdvanceWinner={onAdvanceWinner} />
+          <DoubleBracket doubleBracket={doubleBracket} theme={theme} onAdvanceWinner={onAdvanceWinner} bracketStyle={bracketStyle} />
         )}
       </div>
     </div>

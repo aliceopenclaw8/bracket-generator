@@ -19,8 +19,10 @@ function createParticipants(names) {
 export default function App() {
   const [title, setTitle] = useState('Tournament Bracket');
   const [logo, setLogo] = useState(null);
-  const [themeName, setThemeName] = useState('classic');
+  const [themeName, setThemeName] = useState('bw');
   const [bracketType, setBracketType] = useState('single');
+  const [bracketStyle, setBracketStyle] = useState('boxed');
+  const [layout, setLayout] = useState('standard');
   const [participantNames, setParticipantNames] = useState(DEFAULT_PARTICIPANTS);
   const [bracket, setBracket] = useState(null);
   const [doubleBracket, setDoubleBracket] = useState(null);
@@ -85,6 +87,10 @@ export default function App() {
             setParticipantNames={setParticipantNames}
             bracketType={bracketType}
             setBracketType={setBracketType}
+            bracketStyle={bracketStyle}
+            setBracketStyle={setBracketStyle}
+            layout={layout}
+            setLayout={setLayout}
             onGenerate={handleGenerate}
             theme={theme}
             themeName={themeName}
@@ -115,6 +121,8 @@ export default function App() {
                 bracket={bracket}
                 doubleBracket={doubleBracket}
                 bracketType={bracketType}
+                bracketStyle={bracketStyle}
+                layout={layout}
                 theme={theme}
                 title={title}
                 logo={logo}

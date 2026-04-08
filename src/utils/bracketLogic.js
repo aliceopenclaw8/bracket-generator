@@ -207,6 +207,35 @@ export function generateDoubleElimination(participants) {
   };
 }
 
+// Split a single-elimination bracket into west/east halves for double-sided layout
+// West = top half of the draw, East = bottom half, finals in the center
+export function splitBracketForDoubleSided(rounds) {
+  if (rounds.length < 2) {
+    return { west: rounds, east: [], finals: [] };
+  }
+
+  // The first round has N matches. Split them in half.
+  // West gets matches 0..N/2-1, East gets N/2..N-1
+  // Subsequent rounds follow the same split until we reach the finals (1 match)
+  const west = [];
+  const east = [];
+  let finals = [];
+
+  for (let r = 0; r < rounds.length; r++) {
+    const matches = rounds[r];
+    if (matches.length === 1) {
+      // This is the finals match
+      finals = matches;
+      break;
+    }
+    const half = Math.ceil(matches.length / 2);
+    west.push(matches.slice(0, half));
+    east.push(matches.slice(half));
+  }
+
+  return { west, east, finals };
+}
+
 // Advance a winner in single elimination
 export function advanceWinner(rounds, matchId, team) {
   const newRounds = rounds.map(round =>
@@ -245,14 +274,14 @@ export function advanceWinner(rounds, matchId, team) {
       }
 
       // Clear downstream if winner changed
-      clearDownstream(newRounds, nextRound, nextMatchPos, team);
+      clearDownstream(newRounds, nextRound, nextMatchPos);
     }
   }
 
   return newRounds;
 }
 
-function clearDownstream(rounds, roundIdx, matchIdx, newTeam) {
+function clearDownstream(rounds, roundIdx, matchIdx) {
   const match = rounds[roundIdx][matchIdx];
   if (match.winner) {
     // If the current winner is being replaced, clear it
@@ -267,7 +296,7 @@ function clearDownstream(rounds, roundIdx, matchIdx, newTeam) {
           rounds[nextRound][nextMatchPos].team2 = null;
         }
         rounds[nextRound][nextMatchPos].winner = null;
-        clearDownstream(rounds, nextRound, nextMatchPos, null);
+        clearDownstream(rounds, nextRound, nextMatchPos);
       }
     }
     match.winner = null;

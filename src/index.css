@@ -27,3 +27,19 @@ html, body, #root {
 .bracket-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(0,0,0,0.4);
 }
+
+@page {
+  size: landscape;
+  margin: 0.25in;
+}
+
+@media print {
+  html, body, #root {
+    background: white !important;
+    color: black !important;
+  }
+
+  header, button, .no-print {
+    display: none !important;
+  }
+}
