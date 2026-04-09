@@ -5,8 +5,8 @@ import { getRoundLabel } from '../utils/bracketLogic';
 import { splitBracketForDoubleSided } from '../utils/bracketLogic';
 
 function computeBracketSizing(firstRoundMatchCount) {
-  if (firstRoundMatchCount <= 2) return { cardW: 220, padY: 14, baseGap: 60, roundW: 252 };
-  if (firstRoundMatchCount <= 4) return { cardW: 200, padY: 10, baseGap: 44, roundW: 232 };
+  if (firstRoundMatchCount <= 2) return { cardW: 220, padY: 18, baseGap: 100, roundW: 260 };
+  if (firstRoundMatchCount <= 4) return { cardW: 200, padY: 14, baseGap: 72, roundW: 240 };
   if (firstRoundMatchCount <= 8) return { cardW: 192, padY: 8, baseGap: 32, roundW: 224 };
   if (firstRoundMatchCount <= 16) return { cardW: 176, padY: 5, baseGap: 16, roundW: 208 };
   return { cardW: 160, padY: 3, baseGap: 8, roundW: 192 };
@@ -32,7 +32,7 @@ function AutoScaleWrapper({ children, enabled }) {
 
       if (naturalW <= 0 || naturalH <= 0) return;
 
-      const s = Math.min(1, availW / naturalW, availH / naturalH);
+      const s = Math.min(2, availW / naturalW, availH / naturalH);
       setDims({ scale: s, naturalW, naturalH, ready: true });
     };
 
@@ -131,13 +131,89 @@ function SingleBracket({ bracket, theme, onAdvanceWinner, bracketStyle, sizing, 
   );
 }
 
+function FinalsConnectors({ containerRef, west, east, finals, theme }) {
+  const [lines, setLines] = useState([]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !finals.length) return;
+
+    const updateLines = () => {
+      const containerRect = container.getBoundingClientRect();
+      const newLines = [];
+
+      const finalsEl = container.querySelector(`[data-match-id="${finals[0].id}"]`);
+      if (!finalsEl) return;
+      const finalsRect = finalsEl.getBoundingClientRect();
+      const finalsCenterY = finalsRect.top - containerRect.top + finalsRect.height / 2;
+
+      const drawConnector = (sources, targetX, targetY) => {
+        if (sources.length === 0) return;
+        const midX = (sources[0].x + targetX) / 2;
+        sources.forEach(s => {
+          newLines.push({ x1: s.x, y1: s.y, x2: midX, y2: s.y });
+        });
+        if (sources.length === 2) {
+          newLines.push({ x1: midX, y1: sources[0].y, x2: midX, y2: sources[1].y });
+        }
+        const midY = sources.length === 2 ? (sources[0].y + sources[1].y) / 2 : sources[0].y;
+        newLines.push({ x1: midX, y1: midY, x2: targetX, y2: targetY });
+      };
+
+      // West last round → Finals (left side)
+      if (west.length > 0) {
+        const lastWest = west[west.length - 1];
+        const sources = lastWest.map(m => {
+          const el = container.querySelector(`[data-match-id="${m.id}"]`);
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { x: r.right - containerRect.left, y: r.top - containerRect.top + r.height / 2 };
+        }).filter(Boolean);
+        drawConnector(sources, finalsRect.left - containerRect.left, finalsCenterY);
+      }
+
+      // East last round → Finals (right side)
+      if (east.length > 0) {
+        const lastEast = east[east.length - 1];
+        const sources = lastEast.map(m => {
+          const el = container.querySelector(`[data-match-id="${m.id}"]`);
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { x: r.left - containerRect.left, y: r.top - containerRect.top + r.height / 2 };
+        }).filter(Boolean);
+        drawConnector(sources, finalsRect.right - containerRect.left, finalsCenterY);
+      }
+
+      setLines(newLines);
+    };
+
+    const timer = setTimeout(updateLines, 80);
+    const observer = new ResizeObserver(updateLines);
+    observer.observe(container);
+    return () => { clearTimeout(timer); observer.disconnect(); };
+  }, [containerRef, west, east, finals, theme]);
+
+  return (
+    <svg className="absolute inset-0 pointer-events-none"
+         style={{ width: '100%', height: '100%', overflow: 'visible', zIndex: 10 }}>
+      {lines.map((line, i) => (
+        <line key={i} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2}
+              stroke={theme.connector} strokeWidth="2" strokeLinecap="round" />
+      ))}
+    </svg>
+  );
+}
+
 function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle, sizing, showSeeds }) {
   const { west, east, finals } = splitBracketForDoubleSided(bracket.rounds);
   const westRef = useRef(null);
   const eastRef = useRef(null);
+  const outerRef = useRef(null);
 
   return (
-    <div className="flex items-stretch gap-0" style={{ padding: '20px 0' }}>
+    <div className="relative flex items-stretch gap-0" style={{ padding: '20px 0' }} ref={outerRef}>
+      <FinalsConnectors containerRef={outerRef} west={west} east={east} finals={finals} theme={theme} />
+
       {/* West side (left to right) */}
       <div className="relative flex items-stretch gap-0" ref={westRef}>
         <BracketConnectors containerRef={westRef} rounds={west} theme={theme} />
@@ -186,7 +262,7 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle, siz
 
       {/* East side (right to left, reversed order) */}
       <div className="relative flex items-stretch gap-0 flex-row-reverse" ref={eastRef}>
-        <BracketConnectors containerRef={eastRef} rounds={east} theme={theme} />
+        <BracketConnectors containerRef={eastRef} rounds={east} theme={theme} mirrored />
         {east.map((matches, roundIdx) => (
           <BracketRound
             key={`east-${roundIdx}`}
