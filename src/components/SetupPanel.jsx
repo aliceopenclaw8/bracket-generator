@@ -10,6 +10,10 @@ export default function SetupPanel({
   setBracketType,
   bracketStyle,
   setBracketStyle,
+  showSeeds,
+  setShowSeeds,
+  printMargin,
+  setPrintMargin,
   layout,
   setLayout,
   onGenerate,
@@ -155,6 +159,56 @@ export default function SetupPanel({
           </div>
         </div>
       )}
+
+      {/* Seeded / Unseeded Toggle */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
+          Seed Display
+        </label>
+        <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+          {[
+            { value: true, label: 'Seeded' },
+            { value: false, label: 'Unseeded' },
+          ].map(opt => (
+            <button
+              key={String(opt.value)}
+              onClick={() => setShowSeeds(opt.value)}
+              className="flex-1 py-3 px-4 text-sm font-medium transition-all cursor-pointer"
+              style={{
+                background: showSeeds === opt.value ? theme.accent : theme.cardBg,
+                color: showSeeds === opt.value ? theme.winnerText : theme.text,
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Print Margin */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
+          Print Margin
+        </label>
+        <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+          {[
+            { value: 0.5, label: '0.5 inch' },
+            { value: 1, label: '1 inch' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setPrintMargin(opt.value)}
+              className="flex-1 py-3 px-4 text-sm font-medium transition-all cursor-pointer"
+              style={{
+                background: printMargin === opt.value ? theme.accent : theme.cardBg,
+                color: printMargin === opt.value ? theme.winnerText : theme.text,
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Theme Picker */}
       <div className="mb-6">

@@ -1,10 +1,74 @@
-import { useRef } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import BracketRound from './BracketRound';
 import BracketConnectors from './BracketConnectors';
 import { getRoundLabel } from '../utils/bracketLogic';
 import { splitBracketForDoubleSided } from '../utils/bracketLogic';
 
-function ChampionDisplay({ rounds, theme }) {
+function computeBracketSizing(firstRoundMatchCount) {
+  if (firstRoundMatchCount <= 2) return { cardW: 220, padY: 14, baseGap: 60, roundW: 252 };
+  if (firstRoundMatchCount <= 4) return { cardW: 200, padY: 10, baseGap: 44, roundW: 232 };
+  if (firstRoundMatchCount <= 8) return { cardW: 192, padY: 8, baseGap: 32, roundW: 224 };
+  if (firstRoundMatchCount <= 16) return { cardW: 176, padY: 5, baseGap: 16, roundW: 208 };
+  return { cardW: 160, padY: 3, baseGap: 8, roundW: 192 };
+}
+
+function AutoScaleWrapper({ children, enabled }) {
+  const wrapperRef = useRef(null);
+  const contentRef = useRef(null);
+  const [dims, setDims] = useState({ scale: 1, naturalW: 0, naturalH: 0, ready: !enabled });
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const content = contentRef.current;
+    const wrapper = wrapperRef.current;
+    if (!content || !wrapper) return;
+
+    const update = () => {
+      const naturalW = content.scrollWidth;
+      const naturalH = content.scrollHeight;
+      const availW = wrapper.clientWidth;
+      const availH = Math.max(window.innerHeight - 280, 400);
+
+      if (naturalW <= 0 || naturalH <= 0) return;
+
+      const s = Math.min(1, availW / naturalW, availH / naturalH);
+      setDims({ scale: s, naturalW, naturalH, ready: true });
+    };
+
+    const timer = setTimeout(update, 80);
+    const ro = new ResizeObserver(update);
+    ro.observe(wrapper);
+
+    return () => { clearTimeout(timer); ro.disconnect(); };
+  }, [enabled, children]);
+
+  if (!enabled) return children;
+
+  const { scale, naturalW, naturalH, ready } = dims;
+
+  return (
+    <div ref={wrapperRef} style={{ width: '100%' }}>
+      <div
+        ref={contentRef}
+        data-auto-scale={scale}
+        style={{
+          transformOrigin: 'top left',
+          transform: `scale(${scale})`,
+          width: 'max-content',
+          opacity: ready ? 1 : 0,
+          transition: 'opacity 0.2s',
+          marginRight: naturalW ? `${naturalW * (scale - 1)}px` : 0,
+          marginBottom: naturalH ? `${naturalH * (scale - 1)}px` : 0,
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ChampionDisplay({ rounds, theme, showSeeds }) {
   const lastRound = rounds[rounds.length - 1];
   if (!lastRound || lastRound.length !== 1) return null;
   const finalMatch = lastRound[0];
@@ -30,7 +94,7 @@ function ChampionDisplay({ rounds, theme }) {
         <div className="font-bold text-lg" style={{ color: theme.winnerText }}>
           {finalMatch.winner.name}
         </div>
-        {finalMatch.winner.seed && (
+        {showSeeds !== false && finalMatch.winner.seed && (
           <div className="text-xs mt-1 opacity-70" style={{ color: theme.winnerText }}>
             Seed #{finalMatch.winner.seed}
           </div>
@@ -40,7 +104,7 @@ function ChampionDisplay({ rounds, theme }) {
   );
 }
 
-function SingleBracket({ bracket, theme, onAdvanceWinner, bracketStyle }) {
+function SingleBracket({ bracket, theme, onAdvanceWinner, bracketStyle, sizing, showSeeds }) {
   const containerRef = useRef(null);
 
   return (
@@ -57,15 +121,17 @@ function SingleBracket({ bracket, theme, onAdvanceWinner, bracketStyle }) {
             onAdvanceWinner={onAdvanceWinner}
             bracketSection="winners"
             bracketStyle={bracketStyle}
+            sizing={sizing}
+            showSeeds={showSeeds}
           />
         ))}
-        <ChampionDisplay rounds={bracket.rounds} theme={theme} />
+        <ChampionDisplay rounds={bracket.rounds} theme={theme} showSeeds={showSeeds} />
       </div>
     </div>
   );
 }
 
-function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle }) {
+function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle, sizing, showSeeds }) {
   const { west, east, finals } = splitBracketForDoubleSided(bracket.rounds);
   const westRef = useRef(null);
   const eastRef = useRef(null);
@@ -86,6 +152,8 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle }) {
             bracketSection="winners"
             bracketStyle={bracketStyle}
             label={getRoundLabel(roundIdx, bracket.rounds.length)}
+            sizing={sizing}
+            showSeeds={showSeeds}
           />
         ))}
       </div>
@@ -109,9 +177,11 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle }) {
             bracketSection="winners"
             bracketStyle={bracketStyle}
             label=""
+            sizing={sizing}
+            showSeeds={showSeeds}
           />
         ))}
-        <ChampionDisplay rounds={[finals]} theme={theme} />
+        <ChampionDisplay rounds={[finals]} theme={theme} showSeeds={showSeeds} />
       </div>
 
       {/* East side (right to left, reversed order) */}
@@ -128,6 +198,8 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle }) {
             bracketSection="winners"
             bracketStyle={bracketStyle}
             label={getRoundLabel(roundIdx, bracket.rounds.length)}
+            sizing={sizing}
+            showSeeds={showSeeds}
           />
         ))}
       </div>
@@ -135,7 +207,7 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle }) {
   );
 }
 
-function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle }) {
+function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle, sizing, showSeeds }) {
   const winnersRef = useRef(null);
   const losersRef = useRef(null);
 
@@ -163,6 +235,8 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle }) 
                 bracketSection="winners"
                 label={getRoundLabel(roundIdx, doubleBracket.winnersRounds.length)}
                 bracketStyle={bracketStyle}
+                sizing={sizing}
+                showSeeds={showSeeds}
               />
             ))}
           </div>
@@ -191,6 +265,8 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle }) 
                 bracketSection="losers"
                 label={`Losers R${roundIdx + 1}`}
                 bracketStyle={bracketStyle}
+                sizing={sizing}
+                showSeeds={showSeeds}
               />
             ))}
           </div>
@@ -215,6 +291,8 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle }) 
             bracketSection="grandFinals"
             label="Grand Finals"
             bracketStyle={bracketStyle}
+            sizing={sizing}
+            showSeeds={showSeeds}
           />
         </div>
       </div>
@@ -222,7 +300,11 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle }) 
   );
 }
 
-export default function BracketView({ bracket, doubleBracket, bracketType, bracketStyle, layout, theme, title, logo, onAdvanceWinner }) {
+export default function BracketView({ bracket, doubleBracket, bracketType, bracketStyle, layout, theme, title, logo, onAdvanceWinner, showSeeds }) {
+  const firstRoundCount = bracket?.rounds?.[0]?.length || doubleBracket?.winnersRounds?.[0]?.length || 4;
+  const sizing = computeBracketSizing(firstRoundCount);
+  const isSingleElim = bracketType === 'single';
+
   return (
     <div
       className="rounded-2xl overflow-hidden"
@@ -251,16 +333,18 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
       </div>
 
       {/* Bracket Content */}
-      <div className="p-6 overflow-x-auto bracket-scroll">
-        {bracketType === 'single' && bracket && layout === 'double-sided' && (
-          <DoubleSidedBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} bracketStyle={bracketStyle} />
-        )}
-        {bracketType === 'single' && bracket && layout !== 'double-sided' && (
-          <SingleBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} bracketStyle={bracketStyle} />
-        )}
-        {bracketType === 'double' && doubleBracket && (
-          <DoubleBracket doubleBracket={doubleBracket} theme={theme} onAdvanceWinner={onAdvanceWinner} bracketStyle={bracketStyle} />
-        )}
+      <div className={`p-6 ${isSingleElim ? '' : 'overflow-x-auto bracket-scroll'}`}>
+        <AutoScaleWrapper enabled={isSingleElim}>
+          {bracketType === 'single' && bracket && layout === 'double-sided' && (
+            <DoubleSidedBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} bracketStyle={bracketStyle} sizing={sizing} showSeeds={showSeeds} />
+          )}
+          {bracketType === 'single' && bracket && layout !== 'double-sided' && (
+            <SingleBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} bracketStyle={bracketStyle} sizing={sizing} showSeeds={showSeeds} />
+          )}
+          {bracketType === 'double' && doubleBracket && (
+            <DoubleBracket doubleBracket={doubleBracket} theme={theme} onAdvanceWinner={onAdvanceWinner} bracketStyle={bracketStyle} sizing={sizing} showSeeds={showSeeds} />
+          )}
+        </AutoScaleWrapper>
       </div>
     </div>
   );

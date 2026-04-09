@@ -1,15 +1,43 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
-export default function ExportButtons({ bracketRef, title, theme }) {
+export default function ExportButtons({ bracketRef, title, theme, printMargin = 1 }) {
+  const prepareCapture = () => {
+    const scaledEl = bracketRef.current?.querySelector('[data-auto-scale]');
+    let restore = null;
+    if (scaledEl) {
+      const origTransform = scaledEl.style.transform;
+      const origMarginR = scaledEl.style.marginRight;
+      const origMarginB = scaledEl.style.marginBottom;
+      const origOpacity = scaledEl.style.opacity;
+      scaledEl.style.transform = 'none';
+      scaledEl.style.marginRight = '0px';
+      scaledEl.style.marginBottom = '0px';
+      scaledEl.style.opacity = '1';
+      restore = () => {
+        scaledEl.style.transform = origTransform;
+        scaledEl.style.marginRight = origMarginR;
+        scaledEl.style.marginBottom = origMarginB;
+        scaledEl.style.opacity = origOpacity;
+      };
+    }
+    return restore;
+  };
+
   const handlePNG = async () => {
     if (!bracketRef.current) return;
-    const canvas = await html2canvas(bracketRef.current, {
-      backgroundColor: theme.bg,
-      scale: 2,
-      useCORS: true,
-      logging: false,
-    });
+    const restore = prepareCapture();
+    let canvas;
+    try {
+      canvas = await html2canvas(bracketRef.current, {
+        backgroundColor: theme.bg,
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+    } finally {
+      if (restore) restore();
+    }
     const link = document.createElement('a');
     link.download = `${title.replace(/\s+/g, '_')}.png`;
     link.href = canvas.toDataURL('image/png');
@@ -18,17 +46,23 @@ export default function ExportButtons({ bracketRef, title, theme }) {
 
   const handlePDF = async () => {
     if (!bracketRef.current) return;
-    const canvas = await html2canvas(bracketRef.current, {
-      backgroundColor: theme.bg,
-      scale: 2,
-      useCORS: true,
-      logging: false,
-    });
+    const restore = prepareCapture();
+    let canvas;
+    try {
+      canvas = await html2canvas(bracketRef.current, {
+        backgroundColor: theme.bg,
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+    } finally {
+      if (restore) restore();
+    }
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'in', format: 'letter' });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
-    const margin = 0.25;
+    const margin = printMargin;
     const maxW = pageW - margin * 2;
     const maxH = pageH - margin * 2;
     const ratio = Math.min(maxW / canvas.width, maxH / canvas.height);

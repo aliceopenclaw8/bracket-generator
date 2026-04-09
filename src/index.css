@@ -30,7 +30,7 @@ html, body, #root {
 
 @page {
   size: landscape;
-  margin: 0.25in;
+  margin: 1in;
 }
 
 @media print {

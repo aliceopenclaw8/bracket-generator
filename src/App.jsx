@@ -22,6 +22,8 @@ export default function App() {
   const [themeName, setThemeName] = useState('bw');
   const [bracketType, setBracketType] = useState('single');
   const [bracketStyle, setBracketStyle] = useState('boxed');
+  const [showSeeds, setShowSeeds] = useState(true);
+  const [printMargin, setPrintMargin] = useState(1);
   const [layout, setLayout] = useState('standard');
   const [participantNames, setParticipantNames] = useState(DEFAULT_PARTICIPANTS);
   const [bracket, setBracket] = useState(null);
@@ -89,6 +91,10 @@ export default function App() {
             setBracketType={setBracketType}
             bracketStyle={bracketStyle}
             setBracketStyle={setBracketStyle}
+            showSeeds={showSeeds}
+            setShowSeeds={setShowSeeds}
+            printMargin={printMargin}
+            setPrintMargin={setPrintMargin}
             layout={layout}
             setLayout={setLayout}
             onGenerate={handleGenerate}
@@ -112,8 +118,19 @@ export default function App() {
                   Back to Setup
                 </button>
                 <ThemePicker themeName={themeName} setThemeName={setThemeName} currentTheme={theme} />
+                <button
+                  onClick={() => setShowSeeds(!showSeeds)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                  style={{
+                    background: showSeeds ? theme.accent + '22' : theme.cardBg,
+                    border: `1px solid ${showSeeds ? theme.accent : theme.cardBorder}`,
+                    color: showSeeds ? theme.accent : theme.text,
+                  }}
+                >
+                  {showSeeds ? 'Seeded' : 'Unseeded'}
+                </button>
               </div>
-              <ExportButtons bracketRef={bracketRef} title={title} theme={theme} />
+              <ExportButtons bracketRef={bracketRef} title={title} theme={theme} printMargin={printMargin} />
             </div>
 
             <div ref={bracketRef}>
@@ -127,6 +144,7 @@ export default function App() {
                 title={title}
                 logo={logo}
                 onAdvanceWinner={handleAdvanceWinner}
+                showSeeds={showSeeds}
               />
             </div>
           </>

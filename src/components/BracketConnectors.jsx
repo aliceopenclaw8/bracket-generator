@@ -97,7 +97,7 @@ export default function BracketConnectors({ containerRef, rounds, theme }) {
     <svg
       ref={svgRef}
       className="absolute inset-0 pointer-events-none"
-      style={{ width: '100%', height: '100%', overflow: 'visible' }}
+      style={{ width: '100%', height: '100%', overflow: 'visible', zIndex: 10 }}
     >
       {lines.map((line, i) => (
         <line
