@@ -96,8 +96,15 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
     const minH = 2 * (2 * padY + 20) + 2;
     return (
       <div
-        className="flex items-center justify-center opacity-60"
-        style={{ width: `${sizing?.cardW || 192}px`, padding: '2px 8px', minHeight: `${minH}px` }}
+        className="flex items-center justify-center rounded-lg"
+        style={{
+          width: `${sizing?.cardW || 192}px`,
+          padding: `${padY}px 8px`,
+          minHeight: `${minH}px`,
+          border: `1px dashed ${theme.cardBorder}`,
+          background: theme.cardBg,
+          opacity: 0.5,
+        }}
         data-match-id={match.id}
       >
         {showSeeds !== false && winner.seed && (
@@ -105,7 +112,7 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
             {winner.seed}
           </span>
         )}
-        <span className="text-xs truncate flex-1" style={{ color: theme.textMuted }}>
+        <span className="text-sm truncate flex-1 font-medium" style={{ color: theme.text }}>
           {winner.name || '\u2013'}
         </span>
       </div>
