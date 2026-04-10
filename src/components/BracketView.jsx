@@ -287,23 +287,90 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle, siz
   );
 }
 
+function GrandFinalsConnectors({ containerRef, doubleBracket, theme }) {
+  const [lines, setLines] = useState([]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateLines = () => {
+      const containerRect = container.getBoundingClientRect();
+      const newLines = [];
+
+      const lastWR = doubleBracket.winnersRounds[doubleBracket.winnersRounds.length - 1];
+      const lastLR = doubleBracket.losersRounds[doubleBracket.losersRounds.length - 1];
+      const wEl = container.querySelector(`[data-match-id="${lastWR[lastWR.length - 1].id}"]`);
+      const lEl = container.querySelector(`[data-match-id="${lastLR[lastLR.length - 1].id}"]`);
+      const gfEl = container.querySelector(`[data-match-id="${doubleBracket.grandFinals[0].id}"]`);
+      if (!gfEl) return;
+
+      const gfRect = gfEl.getBoundingClientRect();
+      const gfLeft = gfRect.left - containerRect.left;
+      const gfCenterY = gfRect.top - containerRect.top + gfRect.height / 2;
+
+      // Winners final → Grand Finals
+      if (wEl) {
+        const r = wEl.getBoundingClientRect();
+        const srcX = r.right - containerRect.left;
+        const srcY = r.top - containerRect.top + r.height / 2;
+        const midX = (srcX + gfLeft) / 2;
+        newLines.push({ x1: srcX, y1: srcY, x2: midX, y2: srcY });
+        newLines.push({ x1: midX, y1: srcY, x2: midX, y2: gfCenterY });
+        newLines.push({ x1: midX, y1: gfCenterY, x2: gfLeft, y2: gfCenterY });
+      }
+
+      // Losers final → Grand Finals
+      if (lEl) {
+        const r = lEl.getBoundingClientRect();
+        const srcX = r.right - containerRect.left;
+        const srcY = r.top - containerRect.top + r.height / 2;
+        const midX = (srcX + gfLeft) / 2;
+        newLines.push({ x1: srcX, y1: srcY, x2: midX, y2: srcY });
+        newLines.push({ x1: midX, y1: srcY, x2: midX, y2: gfCenterY });
+        newLines.push({ x1: midX, y1: gfCenterY, x2: gfLeft, y2: gfCenterY });
+      }
+
+      setLines(newLines);
+    };
+
+    const timer = setTimeout(updateLines, 100);
+    const observer = new ResizeObserver(updateLines);
+    observer.observe(container);
+    return () => { clearTimeout(timer); observer.disconnect(); };
+  }, [containerRef, doubleBracket, theme]);
+
+  return (
+    <svg className="absolute inset-0 pointer-events-none"
+         style={{ width: '100%', height: '100%', overflow: 'visible', zIndex: 10 }}>
+      {lines.map((line, i) => (
+        <line key={i} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2}
+              stroke={theme.connector} strokeWidth="2" strokeLinecap="round" />
+      ))}
+    </svg>
+  );
+}
+
 function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle, sizing, showSeeds }) {
   const winnersRef = useRef(null);
   const losersRef = useRef(null);
+  const outerRef = useRef(null);
 
   return (
-    <div className="space-y-8">
+    <div className="relative space-y-4" ref={outerRef}>
+      <GrandFinalsConnectors containerRef={outerRef} doubleBracket={doubleBracket} theme={theme} />
+
       {/* Winners Bracket */}
       <div>
         <div
-          className="inline-block text-sm font-bold uppercase tracking-wider mb-3 px-3 py-1 rounded-full"
+          className="inline-block text-sm font-bold uppercase tracking-wider mb-2 px-3 py-1 rounded-full"
           style={{ color: theme.accent, background: theme.accent + '15' }}
         >
           Winners Bracket
         </div>
         <div className="relative" ref={winnersRef}>
           <BracketConnectors containerRef={winnersRef} rounds={doubleBracket.winnersRounds} theme={theme} />
-          <div className="flex items-stretch gap-0" style={{ padding: '20px 0' }}>
+          <div className="flex items-stretch gap-0" style={{ padding: '12px 0' }}>
             {doubleBracket.winnersRounds.map((matches, roundIdx) => (
               <BracketRound
                 key={roundIdx}
@@ -326,14 +393,14 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle, si
       {/* Losers Bracket */}
       <div>
         <div
-          className="inline-block text-sm font-bold uppercase tracking-wider mb-3 px-3 py-1 rounded-full"
+          className="inline-block text-sm font-bold uppercase tracking-wider mb-2 px-3 py-1 rounded-full"
           style={{ color: theme.textMuted, background: theme.textMuted + '15' }}
         >
           Losers Bracket
         </div>
         <div className="relative" ref={losersRef}>
           <BracketConnectors containerRef={losersRef} rounds={doubleBracket.losersRounds} theme={theme} />
-          <div className="flex items-stretch gap-0" style={{ padding: '20px 0' }}>
+          <div className="flex items-stretch gap-0" style={{ padding: '12px 0' }}>
             {doubleBracket.losersRounds.map((matches, roundIdx) => (
               <BracketRound
                 key={roundIdx}
@@ -356,12 +423,12 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle, si
       {/* Grand Finals */}
       <div>
         <div
-          className="inline-block text-sm font-bold uppercase tracking-wider mb-3 px-3 py-1 rounded-full"
+          className="inline-block text-sm font-bold uppercase tracking-wider mb-2 px-3 py-1 rounded-full"
           style={{ color: theme.accent, background: theme.accent + '15' }}
         >
           Grand Finals
         </div>
-        <div className="flex items-center gap-4 py-4">
+        <div className="flex items-center gap-4 py-2">
           <BracketRound
             matches={doubleBracket.grandFinals}
             roundIndex={0}
@@ -389,7 +456,6 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
     ? allRounds[1].length
     : firstRound.length || 4;
   const sizing = computeBracketSizing(effectiveCount);
-  const isSingleElim = bracketType === 'single';
 
   return (
     <div
@@ -419,8 +485,8 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
       </div>
 
       {/* Bracket Content */}
-      <div className={`p-6 ${isSingleElim ? '' : 'overflow-x-auto bracket-scroll'}`}>
-        <AutoScaleWrapper enabled={isSingleElim}>
+      <div className="p-6">
+        <AutoScaleWrapper enabled={true}>
           {bracketType === 'single' && bracket && layout === 'double-sided' && (
             <DoubleSidedBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} bracketStyle={bracketStyle} sizing={sizing} showSeeds={showSeeds} />
           )}
