@@ -39,6 +39,12 @@ html, body, #root {
     color: black !important;
   }
 
+  /* Override inline theme background for consistent print output */
+  .bracket-container {
+    background: white !important;
+    color: black !important;
+  }
+
   header, button, .no-print {
     display: none !important;
   }
