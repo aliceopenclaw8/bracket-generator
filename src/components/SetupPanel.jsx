@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ThemePicker from './ThemePicker';
 import { shuffleArray } from '../utils/shuffle';
@@ -22,6 +22,13 @@ export default function SetupPanel({
   setThemeName,
 }) {
   const validCount = participantNames.filter(n => n.trim()).length;
+
+  // Reset layout to standard if participant count drops below threshold for double-sided
+  useEffect(() => {
+    if (participantNames.length < 8 && layout === 'double-sided') {
+      setLayout('standard');
+    }
+  }, [participantNames.length, layout, setLayout]);
 
   const handleNameChange = (index, value) => {
     const newNames = [...participantNames];
@@ -48,6 +55,7 @@ export default function SetupPanel({
 
   const presets = [4, 8, 16, 32];
   const [customCount, setCustomCount] = useState('');
+  const [customCountError, setCustomCountError] = useState('');
 
   const handlePreset = (count) => {
     const names = [];
@@ -56,11 +64,16 @@ export default function SetupPanel({
     }
     setParticipantNames(names);
     setCustomCount('');
+    setCustomCountError('');
   };
 
   const handleCustomCount = () => {
     const count = parseInt(customCount, 10);
-    if (!count || count < 2 || count > 128) return;
+    if (!count || count < 2 || count > 128) {
+      setCustomCountError('Enter a number between 2 and 128');
+      return;
+    }
+    setCustomCountError('');
     const names = [];
     for (let i = 0; i < count; i++) {
       names.push(participantNames[i] || `Team ${i + 1}`);
@@ -134,7 +147,7 @@ export default function SetupPanel({
       </div>
 
       {/* Layout Toggle */}
-      {bracketType === 'single' && (
+      {bracketType === 'single' && participantNames.length >= 8 && (
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
             Layout
@@ -245,7 +258,7 @@ export default function SetupPanel({
             min="2"
             max="128"
             value={customCount}
-            onChange={(e) => setCustomCount(e.target.value)}
+            onChange={(e) => { setCustomCount(e.target.value); setCustomCountError(''); }}
             onKeyDown={(e) => e.key === 'Enter' && handleCustomCount()}
             placeholder="Custom # of teams"
             className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
@@ -267,6 +280,9 @@ export default function SetupPanel({
             Set
           </button>
         </div>
+        {customCountError && (
+          <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{customCountError}</p>
+        )}
       </div>
 
       {/* Participants List */}
