@@ -32,16 +32,17 @@ function AutoScaleWrapper({ children, enabled }) {
 
       if (naturalW <= 0 || naturalH <= 0) return;
 
-      const s = Math.min(2, availW / naturalW, availH / naturalH);
+      const s = Math.max(0.35, Math.min(2, availW / naturalW, availH / naturalH));
       setDims({ scale: s, naturalW, naturalH, ready: true });
     };
 
     const timer = setTimeout(update, 80);
     const ro = new ResizeObserver(update);
     ro.observe(wrapper);
+    ro.observe(content); // Also observe content so scale recalculates when bracket changes size
 
     return () => { clearTimeout(timer); ro.disconnect(); };
-  }, [enabled, children]);
+  }, [enabled]);
 
   if (!enabled) return children;
 
@@ -383,7 +384,7 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
 
   return (
     <div
-      className="rounded-2xl overflow-hidden"
+      className="bracket-container rounded-2xl overflow-hidden"
       style={{
         background: theme.bg,
         border: `1px solid ${theme.cardBorder}`,
