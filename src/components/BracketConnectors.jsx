@@ -72,17 +72,19 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
             });
           }
 
-          // Horizontal from mid to target
+          // Connect midpoint to target with right-angle lines (never diagonal)
           const midY = sources.length === 2
             ? (sources[0].y + sources[1].y) / 2
             : sources[0].y;
 
-          newLines.push({
-            x1: midX,
-            y1: midY,
-            x2: targetX,
-            y2: targetY,
-          });
+          if (Math.abs(midY - targetY) > 1) {
+            // Vertical from midY to targetY, then horizontal to target
+            newLines.push({ x1: midX, y1: midY, x2: midX, y2: targetY });
+            newLines.push({ x1: midX, y1: targetY, x2: targetX, y2: targetY });
+          } else {
+            // Straight horizontal to target
+            newLines.push({ x1: midX, y1: midY, x2: targetX, y2: targetY });
+          }
         }
       }
 
