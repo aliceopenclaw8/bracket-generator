@@ -296,24 +296,28 @@ function GrandFinalsConnectors({ containerRef, doubleBracket, theme }) {
 
     const updateLines = () => {
       const containerRect = container.getBoundingClientRect();
+      // Account for CSS transform scale (AutoScaleWrapper)
+      const scaleEl = container.closest('[data-auto-scale]');
+      const scale = scaleEl ? parseFloat(scaleEl.dataset.autoScale) || 1 : 1;
       const newLines = [];
 
       const lastWR = doubleBracket.winnersRounds[doubleBracket.winnersRounds.length - 1];
       const lastLR = doubleBracket.losersRounds[doubleBracket.losersRounds.length - 1];
+      if (!lastWR?.length || !lastLR?.length || !doubleBracket.grandFinals?.length) return;
       const wEl = container.querySelector(`[data-match-id="${lastWR[lastWR.length - 1].id}"]`);
       const lEl = container.querySelector(`[data-match-id="${lastLR[lastLR.length - 1].id}"]`);
       const gfEl = container.querySelector(`[data-match-id="${doubleBracket.grandFinals[0].id}"]`);
       if (!gfEl) return;
 
       const gfRect = gfEl.getBoundingClientRect();
-      const gfLeft = gfRect.left - containerRect.left;
-      const gfCenterY = gfRect.top - containerRect.top + gfRect.height / 2;
+      const gfLeft = (gfRect.left - containerRect.left) / scale;
+      const gfCenterY = (gfRect.top - containerRect.top + gfRect.height / 2) / scale;
 
       // Winners final → Grand Finals
       if (wEl) {
         const r = wEl.getBoundingClientRect();
-        const srcX = r.right - containerRect.left;
-        const srcY = r.top - containerRect.top + r.height / 2;
+        const srcX = (r.right - containerRect.left) / scale;
+        const srcY = (r.top - containerRect.top + r.height / 2) / scale;
         const midX = (srcX + gfLeft) / 2;
         newLines.push({ x1: srcX, y1: srcY, x2: midX, y2: srcY });
         newLines.push({ x1: midX, y1: srcY, x2: midX, y2: gfCenterY });
@@ -323,8 +327,8 @@ function GrandFinalsConnectors({ containerRef, doubleBracket, theme }) {
       // Losers final → Grand Finals
       if (lEl) {
         const r = lEl.getBoundingClientRect();
-        const srcX = r.right - containerRect.left;
-        const srcY = r.top - containerRect.top + r.height / 2;
+        const srcX = (r.right - containerRect.left) / scale;
+        const srcY = (r.top - containerRect.top + r.height / 2) / scale;
         const midX = (srcX + gfLeft) / 2;
         newLines.push({ x1: srcX, y1: srcY, x2: midX, y2: srcY });
         newLines.push({ x1: midX, y1: srcY, x2: midX, y2: gfCenterY });
@@ -456,6 +460,8 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
     ? allRounds[1].length
     : firstRound.length || 4;
   const sizing = computeBracketSizing(effectiveCount);
+  // Auto-scale for ≤16 teams (effectiveCount ≤ 8), scroll for larger brackets
+  const shouldAutoScale = effectiveCount <= 8;
 
   return (
     <div
@@ -485,8 +491,8 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
       </div>
 
       {/* Bracket Content */}
-      <div className="p-6">
-        <AutoScaleWrapper enabled={true}>
+      <div className={`p-6 ${shouldAutoScale ? '' : 'overflow-x-auto bracket-scroll'}`}>
+        <AutoScaleWrapper enabled={shouldAutoScale}>
           {bracketType === 'single' && bracket && layout === 'double-sided' && (
             <DoubleSidedBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} bracketStyle={bracketStyle} sizing={sizing} showSeeds={showSeeds} />
           )}
