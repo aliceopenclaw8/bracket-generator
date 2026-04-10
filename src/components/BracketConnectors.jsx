@@ -12,6 +12,9 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
       if (!container) return;
 
       const containerRect = container.getBoundingClientRect();
+      // Account for CSS transform scale (AutoScaleWrapper)
+      const scaleEl = container.closest('[data-auto-scale]');
+      const scale = scaleEl ? parseFloat(scaleEl.dataset.autoScale) || 1 : 1;
       const newLines = [];
 
       // For each round after the first, connect matches to their feeder matches
@@ -22,9 +25,9 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
 
           const matchRect = matchEl.getBoundingClientRect();
           const targetX = mirrored
-            ? matchRect.right - containerRect.left
-            : matchRect.left - containerRect.left;
-          const targetY = matchRect.top - containerRect.top + matchRect.height / 2;
+            ? (matchRect.right - containerRect.left) / scale
+            : (matchRect.left - containerRect.left) / scale;
+          const targetY = (matchRect.top - containerRect.top + matchRect.height / 2) / scale;
 
           // Two source matches
           const sourceIdx1 = m * 2;
@@ -38,9 +41,9 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
               const rect = el.getBoundingClientRect();
               return {
                 x: mirrored
-                  ? rect.left - containerRect.left
-                  : rect.right - containerRect.left,
-                y: rect.top - containerRect.top + rect.height / 2,
+                  ? (rect.left - containerRect.left) / scale
+                  : (rect.right - containerRect.left) / scale,
+                y: (rect.top - containerRect.top + rect.height / 2) / scale,
               };
             })
             .filter(Boolean);

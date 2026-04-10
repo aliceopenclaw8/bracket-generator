@@ -14,7 +14,6 @@ export default function BracketRound({
   showSeeds,
 }) {
   const roundLabel = label || getRoundLabel(roundIndex, totalRounds);
-  const baseGap = sizing?.baseGap || 32;
   const roundW = sizing?.roundW || 224;
 
   return (
@@ -25,10 +24,7 @@ export default function BracketRound({
       >
         {roundLabel}
       </div>
-      <div
-        className="flex flex-col justify-around flex-1"
-        style={{ gap: `${Math.pow(2, roundIndex) * baseGap}px` }}
-      >
+      <div className="flex flex-col justify-around flex-1">
         {matches.map((match) => (
           <MatchCard
             key={match.id}

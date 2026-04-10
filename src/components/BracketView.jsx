@@ -141,12 +141,15 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
 
     const updateLines = () => {
       const containerRect = container.getBoundingClientRect();
+      // Account for CSS transform scale (AutoScaleWrapper)
+      const scaleEl = container.closest('[data-auto-scale]');
+      const scale = scaleEl ? parseFloat(scaleEl.dataset.autoScale) || 1 : 1;
       const newLines = [];
 
       const finalsEl = container.querySelector(`[data-match-id="${finals[0].id}"]`);
       if (!finalsEl) return;
       const finalsRect = finalsEl.getBoundingClientRect();
-      const finalsCenterY = finalsRect.top - containerRect.top + finalsRect.height / 2;
+      const finalsCenterY = (finalsRect.top - containerRect.top + finalsRect.height / 2) / scale;
 
       const drawConnector = (sources, targetX, targetY) => {
         if (sources.length === 0) return;
@@ -168,9 +171,9 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
           const el = container.querySelector(`[data-match-id="${m.id}"]`);
           if (!el) return null;
           const r = el.getBoundingClientRect();
-          return { x: r.right - containerRect.left, y: r.top - containerRect.top + r.height / 2 };
+          return { x: (r.right - containerRect.left) / scale, y: (r.top - containerRect.top + r.height / 2) / scale };
         }).filter(Boolean);
-        drawConnector(sources, finalsRect.left - containerRect.left, finalsCenterY);
+        drawConnector(sources, (finalsRect.left - containerRect.left) / scale, finalsCenterY);
       }
 
       // East last round → Finals (right side)
@@ -180,9 +183,9 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
           const el = container.querySelector(`[data-match-id="${m.id}"]`);
           if (!el) return null;
           const r = el.getBoundingClientRect();
-          return { x: r.left - containerRect.left, y: r.top - containerRect.top + r.height / 2 };
+          return { x: (r.left - containerRect.left) / scale, y: (r.top - containerRect.top + r.height / 2) / scale };
         }).filter(Boolean);
-        drawConnector(sources, finalsRect.right - containerRect.left, finalsCenterY);
+        drawConnector(sources, (finalsRect.right - containerRect.left) / scale, finalsCenterY);
       }
 
       setLines(newLines);
@@ -378,8 +381,14 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle, si
 }
 
 export default function BracketView({ bracket, doubleBracket, bracketType, bracketStyle, layout, theme, title, logo, onAdvanceWinner, showSeeds }) {
-  const firstRoundCount = bracket?.rounds?.[0]?.length || doubleBracket?.winnersRounds?.[0]?.length || 4;
-  const sizing = computeBracketSizing(firstRoundCount);
+  // Use effective match count for sizing (skip bye-dominated first rounds)
+  const allRounds = bracket?.rounds || doubleBracket?.winnersRounds || [];
+  const firstRound = allRounds[0] || [];
+  const byeCount = firstRound.filter(m => m.isBye).length;
+  const effectiveCount = byeCount > firstRound.length / 2 && allRounds[1]
+    ? allRounds[1].length
+    : firstRound.length || 4;
+  const sizing = computeBracketSizing(effectiveCount);
   const isSingleElim = bracketType === 'single';
 
   return (
