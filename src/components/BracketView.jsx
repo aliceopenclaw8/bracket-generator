@@ -287,82 +287,12 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle, siz
   );
 }
 
-function GrandFinalsConnectors({ containerRef, doubleBracket, theme }) {
-  const [lines, setLines] = useState([]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const updateLines = () => {
-      const containerRect = container.getBoundingClientRect();
-      // Account for CSS transform scale (AutoScaleWrapper)
-      const scaleEl = container.closest('[data-auto-scale]');
-      const scale = scaleEl ? parseFloat(scaleEl.dataset.autoScale) || 1 : 1;
-      const newLines = [];
-
-      const lastWR = doubleBracket.winnersRounds[doubleBracket.winnersRounds.length - 1];
-      const lastLR = doubleBracket.losersRounds[doubleBracket.losersRounds.length - 1];
-      if (!lastWR?.length || !lastLR?.length || !doubleBracket.grandFinals?.length) return;
-      const wEl = container.querySelector(`[data-match-id="${lastWR[lastWR.length - 1].id}"]`);
-      const lEl = container.querySelector(`[data-match-id="${lastLR[lastLR.length - 1].id}"]`);
-      const gfEl = container.querySelector(`[data-match-id="${doubleBracket.grandFinals[0].id}"]`);
-      if (!gfEl) return;
-
-      const gfRect = gfEl.getBoundingClientRect();
-      const gfLeft = (gfRect.left - containerRect.left) / scale;
-      const gfCenterY = (gfRect.top - containerRect.top + gfRect.height / 2) / scale;
-
-      // Winners final → Grand Finals
-      if (wEl) {
-        const r = wEl.getBoundingClientRect();
-        const srcX = (r.right - containerRect.left) / scale;
-        const srcY = (r.top - containerRect.top + r.height / 2) / scale;
-        const midX = (srcX + gfLeft) / 2;
-        newLines.push({ x1: srcX, y1: srcY, x2: midX, y2: srcY });
-        newLines.push({ x1: midX, y1: srcY, x2: midX, y2: gfCenterY });
-        newLines.push({ x1: midX, y1: gfCenterY, x2: gfLeft, y2: gfCenterY });
-      }
-
-      // Losers final → Grand Finals
-      if (lEl) {
-        const r = lEl.getBoundingClientRect();
-        const srcX = (r.right - containerRect.left) / scale;
-        const srcY = (r.top - containerRect.top + r.height / 2) / scale;
-        const midX = (srcX + gfLeft) / 2;
-        newLines.push({ x1: srcX, y1: srcY, x2: midX, y2: srcY });
-        newLines.push({ x1: midX, y1: srcY, x2: midX, y2: gfCenterY });
-        newLines.push({ x1: midX, y1: gfCenterY, x2: gfLeft, y2: gfCenterY });
-      }
-
-      setLines(newLines);
-    };
-
-    const timer = setTimeout(updateLines, 100);
-    const observer = new ResizeObserver(updateLines);
-    observer.observe(container);
-    return () => { clearTimeout(timer); observer.disconnect(); };
-  }, [containerRef, doubleBracket, theme]);
-
-  return (
-    <svg className="absolute inset-0 pointer-events-none"
-         style={{ width: '100%', height: '100%', overflow: 'visible', zIndex: 10 }}>
-      {lines.map((line, i) => (
-        <line key={i} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2}
-              stroke={theme.connector} strokeWidth="2" strokeLinecap="round" />
-      ))}
-    </svg>
-  );
-}
-
 function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle, sizing, showSeeds }) {
   const winnersRef = useRef(null);
   const losersRef = useRef(null);
-  const outerRef = useRef(null);
 
   return (
-    <div className="relative space-y-4" ref={outerRef}>
-      <GrandFinalsConnectors containerRef={outerRef} doubleBracket={doubleBracket} theme={theme} />
+    <div className="space-y-4">
 
       {/* Winners Bracket */}
       <div>
