@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-export default function BracketConnectors({ containerRef, rounds, theme }) {
+export default function BracketConnectors({ containerRef, rounds, theme, mirrored = false }) {
   const [lines, setLines] = useState([]);
   const svgRef = useRef(null);
 
@@ -21,7 +21,9 @@ export default function BracketConnectors({ containerRef, rounds, theme }) {
           if (!matchEl) continue;
 
           const matchRect = matchEl.getBoundingClientRect();
-          const targetX = matchRect.left - containerRect.left;
+          const targetX = mirrored
+            ? matchRect.right - containerRect.left
+            : matchRect.left - containerRect.left;
           const targetY = matchRect.top - containerRect.top + matchRect.height / 2;
 
           // Two source matches
@@ -35,7 +37,9 @@ export default function BracketConnectors({ containerRef, rounds, theme }) {
               if (!el) return null;
               const rect = el.getBoundingClientRect();
               return {
-                x: rect.right - containerRect.left,
+                x: mirrored
+                  ? rect.left - containerRect.left
+                  : rect.right - containerRect.left,
                 y: rect.top - containerRect.top + rect.height / 2,
               };
             })
@@ -91,13 +95,13 @@ export default function BracketConnectors({ containerRef, rounds, theme }) {
       clearTimeout(timer);
       observer.disconnect();
     };
-  }, [containerRef, rounds, theme]);
+  }, [containerRef, rounds, theme, mirrored]);
 
   return (
     <svg
       ref={svgRef}
       className="absolute inset-0 pointer-events-none"
-      style={{ width: '100%', height: '100%', overflow: 'visible' }}
+      style={{ width: '100%', height: '100%', overflow: 'visible', zIndex: 10 }}
     >
       {lines.map((line, i) => (
         <line

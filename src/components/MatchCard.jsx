@@ -1,6 +1,6 @@
-function TeamSlot({ team, isWinner, onAdvance, theme, position }) {
+function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketStyle, sizing, showSeeds }) {
   const isEmpty = !team;
-  const displayName = team?.name || 'TBD';
+  const displayName = team?.name || '';
 
   const handleClick = () => {
     if (team && onAdvance) {
@@ -8,19 +8,59 @@ function TeamSlot({ team, isWinner, onAdvance, theme, position }) {
     }
   };
 
+  if (bracketStyle === 'line') {
+    return (
+      <div
+        className={`flex items-center gap-2 px-2 transition-all ${
+          !isEmpty && onAdvance ? 'cursor-pointer hover:opacity-70' : ''
+        }`}
+        style={{
+          borderBottom: `2px solid ${theme.connector}`,
+          paddingTop: `${sizing?.padY || 4}px`,
+          paddingBottom: `${sizing?.padY || 4}px`,
+        }}
+        onClick={handleClick}
+        title={!isEmpty && onAdvance ? `Click to advance ${displayName}` : ''}
+      >
+        {showSeeds !== false && team?.seed && (
+          <span
+            className="text-[10px] font-mono w-5 text-center shrink-0"
+            style={{ color: isWinner ? theme.accent : theme.textMuted }}
+          >
+            {team.seed}
+          </span>
+        )}
+        <span
+          className={`text-sm truncate flex-1 ${isWinner ? 'font-bold' : isEmpty ? '' : 'font-medium'}`}
+          style={{ color: isWinner ? theme.accent : isEmpty ? 'transparent' : theme.text }}
+        >
+          {displayName || '\u00A0'}
+        </span>
+        {isWinner && (
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+               stroke={theme.accent} strokeWidth="3" className="shrink-0">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
-      className={`flex items-center gap-2 px-3 py-2 transition-all ${
+      className={`flex items-center gap-2 px-3 transition-all ${
         !isEmpty && onAdvance ? 'cursor-pointer hover:brightness-110' : ''
       } ${position === 'top' ? 'rounded-t-lg' : 'rounded-b-lg'}`}
       style={{
         background: isWinner ? theme.winnerBg : theme.cardBg,
         borderBottom: position === 'top' ? `1px solid ${theme.cardBorder}` : 'none',
+        paddingTop: `${sizing?.padY || 8}px`,
+        paddingBottom: `${sizing?.padY || 8}px`,
       }}
       onClick={handleClick}
       title={!isEmpty && onAdvance ? `Click to advance ${displayName}` : ''}
     >
-      {team?.seed && (
+      {showSeeds !== false && team?.seed && (
         <span
           className="text-[10px] font-mono w-5 text-center shrink-0 rounded"
           style={{
@@ -32,10 +72,10 @@ function TeamSlot({ team, isWinner, onAdvance, theme, position }) {
         </span>
       )}
       <span
-        className={`text-sm truncate flex-1 ${isEmpty ? 'italic opacity-40' : 'font-medium'}`}
+        className={`text-sm truncate flex-1 ${isEmpty ? 'opacity-20' : 'font-medium'}`}
         style={{ color: isWinner ? theme.winnerText : isEmpty ? theme.textMuted : theme.text }}
       >
-        {displayName}
+        {displayName || '\u2013'}
       </span>
       {isWinner && (
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
@@ -47,18 +87,18 @@ function TeamSlot({ team, isWinner, onAdvance, theme, position }) {
   );
 }
 
-export default function MatchCard({ match, theme, onAdvanceWinner, bracketSection }) {
+export default function MatchCard({ match, theme, onAdvanceWinner, bracketSection, bracketStyle, sizing, showSeeds }) {
   const { team1, team2, winner, isBye } = match;
 
   if (isBye && winner) {
     return (
       <div
-        className="rounded-lg overflow-hidden w-48 opacity-50"
-        style={{ border: `1px solid ${theme.cardBorder}` }}
+        className={`${bracketStyle === 'line' ? '' : 'rounded-lg'} overflow-hidden opacity-50`}
+        style={{ border: bracketStyle === 'line' ? 'none' : `1px solid ${theme.cardBorder}`, width: `${sizing?.cardW || 192}px` }}
         data-match-id={match.id}
       >
-        <TeamSlot team={winner} isWinner={false} theme={theme} position="top" />
-        <TeamSlot team={null} isWinner={false} theme={theme} position="bottom" />
+        <TeamSlot team={winner} isWinner={false} theme={theme} position="top" bracketStyle={bracketStyle} sizing={sizing} showSeeds={showSeeds} />
+        <TeamSlot team={null} isWinner={false} theme={theme} position="bottom" bracketStyle={bracketStyle} sizing={sizing} showSeeds={showSeeds} />
       </div>
     );
   }
@@ -73,8 +113,8 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
 
   return (
     <div
-      className="rounded-lg overflow-hidden w-48 shadow-lg transition-shadow hover:shadow-xl"
-      style={{ border: `1px solid ${theme.cardBorder}` }}
+      className={`${bracketStyle === 'line' ? '' : 'rounded-lg shadow-lg hover:shadow-xl'} overflow-hidden transition-shadow`}
+      style={{ border: bracketStyle === 'line' ? 'none' : `1px solid ${theme.cardBorder}`, width: `${sizing?.cardW || 192}px` }}
       data-match-id={match.id}
     >
       <TeamSlot
@@ -83,6 +123,9 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
         onAdvance={canAdvance ? handleAdvance : null}
         theme={theme}
         position="top"
+        bracketStyle={bracketStyle}
+        sizing={sizing}
+        showSeeds={showSeeds}
       />
       <TeamSlot
         team={team2}
@@ -90,6 +133,9 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
         onAdvance={canAdvance ? handleAdvance : null}
         theme={theme}
         position="bottom"
+        bracketStyle={bracketStyle}
+        sizing={sizing}
+        showSeeds={showSeeds}
       />
     </div>
   );
