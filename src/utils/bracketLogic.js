@@ -66,15 +66,9 @@ export function generateSingleElimination(participants) {
   rounds.push(firstRoundMatches);
 
   // Create subsequent rounds
-  for (let r = 1; r <= totalRounds; r++) {
+  for (let r = 1; r < totalRounds; r++) {
     const prevRound = rounds[r - 1];
     const currentRound = [];
-
-    // Special: if this is the champion round (1 match), treat differently
-    if (r === totalRounds) {
-      // Champion display - single match for finals already added
-      // Actually the last round with 1 match is the finals
-    }
 
     for (let i = 0; i < prevRound.length; i += 2) {
       const match = {
