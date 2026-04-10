@@ -8,8 +8,8 @@ import ExportButtons from './components/ExportButtons';
 import ThemePicker from './components/ThemePicker';
 
 const DEFAULT_PARTICIPANTS = [
-  'Team Alpha', 'Team Bravo', 'Team Charlie', 'Team Delta',
-  'Team Echo', 'Team Foxtrot', 'Team Golf', 'Team Hotel',
+  'Team 1', 'Team 2', 'Team 3', 'Team 4',
+  'Team 5', 'Team 6', 'Team 7', 'Team 8',
 ];
 
 function createParticipants(names) {
