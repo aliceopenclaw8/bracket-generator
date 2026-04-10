@@ -29,11 +29,11 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
             : (matchRect.left - containerRect.left) / scale;
           const targetY = (matchRect.top - containerRect.top + matchRect.height / 2) / scale;
 
-          // Two source matches
-          const sourceIdx1 = m * 2;
-          const sourceIdx2 = m * 2 + 1;
+          // Detect merge round (same count = 1:1) vs reduce round (halved = 2:1)
+          const isMergeRound = rounds[r].length === rounds[r - 1].length;
+          const sourceIndices = isMergeRound ? [m] : [m * 2, m * 2 + 1];
 
-          const sources = [sourceIdx1, sourceIdx2]
+          const sources = sourceIndices
             .filter(idx => idx < rounds[r - 1].length)
             .map(idx => {
               const el = container.querySelector(`[data-match-id="${rounds[r - 1][idx].id}"]`);
