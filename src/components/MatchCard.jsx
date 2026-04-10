@@ -93,12 +93,18 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
   if (isBye && winner) {
     return (
       <div
-        className={`${bracketStyle === 'line' ? '' : 'rounded-lg'} overflow-hidden opacity-50`}
-        style={{ border: bracketStyle === 'line' ? 'none' : `1px solid ${theme.cardBorder}`, width: `${sizing?.cardW || 192}px` }}
+        className="flex items-center opacity-60"
+        style={{ width: `${sizing?.cardW || 192}px`, padding: '2px 8px' }}
         data-match-id={match.id}
       >
-        <TeamSlot team={winner} isWinner={false} theme={theme} position="top" bracketStyle={bracketStyle} sizing={sizing} showSeeds={showSeeds} />
-        <TeamSlot team={null} isWinner={false} theme={theme} position="bottom" bracketStyle={bracketStyle} sizing={sizing} showSeeds={showSeeds} />
+        {showSeeds !== false && winner.seed && (
+          <span className="text-[10px] font-mono w-5 text-center shrink-0" style={{ color: theme.textMuted }}>
+            {winner.seed}
+          </span>
+        )}
+        <span className="text-xs truncate flex-1" style={{ color: theme.textMuted }}>
+          {winner.name || '\u2013'}
+        </span>
       </div>
     );
   }
