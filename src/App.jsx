@@ -61,6 +61,9 @@ export default function App() {
       } else if (bracketSection === 'losers') {
         const newRounds = advanceWinner(doubleBracket.losersRounds, matchId, team);
         setDoubleBracket({ ...doubleBracket, losersRounds: newRounds });
+      } else if (bracketSection === 'grandFinals') {
+        const newGF = advanceWinner([doubleBracket.grandFinals], matchId, team);
+        setDoubleBracket({ ...doubleBracket, grandFinals: newGF[0] });
       }
     }
   }, [bracket, doubleBracket, bracketType]);
