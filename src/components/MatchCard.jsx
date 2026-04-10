@@ -91,10 +91,13 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
   const { team1, team2, winner, isBye } = match;
 
   if (isBye && winner) {
+    // minHeight matches a regular 2-slot card so justify-around alignment is consistent
+    const padY = sizing?.padY || 8;
+    const minH = 2 * (2 * padY + 20) + 2;
     return (
       <div
-        className="flex items-center opacity-60"
-        style={{ width: `${sizing?.cardW || 192}px`, padding: '2px 8px' }}
+        className="flex items-center justify-center opacity-60"
+        style={{ width: `${sizing?.cardW || 192}px`, padding: '2px 8px', minHeight: `${minH}px` }}
         data-match-id={match.id}
       >
         {showSeeds !== false && winner.seed && (
