@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function BracketConnectors({ containerRef, rounds, theme, mirrored = false }) {
   const [lines, setLines] = useState([]);
-  const svgRef = useRef(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -17,10 +16,6 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
       const scale = scaleEl ? parseFloat(scaleEl.dataset.autoScale) || 1 : 1;
       const newLines = [];
 
-      // Anchor connectors to the vertical midpoint of each match card.
-      const computeMatchY = (matchRect) =>
-        (matchRect.top - containerRect.top + matchRect.height / 2) / scale;
-
       // For each round after the first, connect matches to their feeder matches
       for (let r = 1; r < rounds.length; r++) {
         for (let m = 0; m < rounds[r].length; m++) {
@@ -31,7 +26,8 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
           const targetX = mirrored
             ? (matchRect.right - containerRect.left) / scale
             : (matchRect.left - containerRect.left) / scale;
-          const targetY = computeMatchY(matchRect);
+          // Vertical midpoint of match card — connector anchor
+          const targetY = (matchRect.top - containerRect.top + matchRect.height / 2) / scale;
 
           // Detect merge round (same count = 1:1) vs reduce round (halved = 2:1)
           const isMergeRound = rounds[r].length === rounds[r - 1].length;
@@ -50,7 +46,7 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
                 x: mirrored
                   ? (rect.left - containerRect.left) / scale
                   : (rect.right - containerRect.left) / scale,
-                y: computeMatchY(rect),
+                y: (rect.top - containerRect.top + rect.height / 2) / scale,
               };
             })
             .filter(Boolean);
@@ -111,7 +107,6 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
 
   return (
     <svg
-      ref={svgRef}
       className="absolute inset-0 pointer-events-none"
       style={{ width: '100%', height: '100%', overflow: 'visible', zIndex: 10 }}
     >

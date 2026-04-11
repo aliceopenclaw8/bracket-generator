@@ -154,14 +154,11 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
       const scale = scaleEl ? parseFloat(scaleEl.dataset.autoScale) || 1 : 1;
       const newLines = [];
 
-      // Anchor connectors to the vertical midpoint of each match card.
-      const computeMatchY = (matchRect) =>
-        (matchRect.top - containerRect.top + matchRect.height / 2) / scale;
-
       const finalsEl = container.querySelector(`[data-match-id="${finals[0].id}"]`);
       if (!finalsEl) return;
       const finalsRect = finalsEl.getBoundingClientRect();
-      const finalsCenterY = computeMatchY(finalsRect);
+      // Vertical midpoint of match card — connector anchor
+      const finalsCenterY = (finalsRect.top - containerRect.top + finalsRect.height / 2) / scale;
 
       const drawConnector = (sources, targetX, targetY) => {
         if (sources.length === 0) return;
@@ -184,7 +181,10 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
           if (!el) return null;
           if (el.getAttribute('data-is-bye') === 'true') return null;
           const r = el.getBoundingClientRect();
-          return { x: (r.right - containerRect.left) / scale, y: computeMatchY(r) };
+          return {
+            x: (r.right - containerRect.left) / scale,
+            y: (r.top - containerRect.top + r.height / 2) / scale,
+          };
         }).filter(Boolean);
         drawConnector(sources, (finalsRect.left - containerRect.left) / scale, finalsCenterY);
       }
@@ -197,7 +197,10 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
           if (!el) return null;
           if (el.getAttribute('data-is-bye') === 'true') return null;
           const r = el.getBoundingClientRect();
-          return { x: (r.left - containerRect.left) / scale, y: computeMatchY(r) };
+          return {
+            x: (r.left - containerRect.left) / scale,
+            y: (r.top - containerRect.top + r.height / 2) / scale,
+          };
         }).filter(Boolean);
         drawConnector(sources, (finalsRect.right - containerRect.left) / scale, finalsCenterY);
       }

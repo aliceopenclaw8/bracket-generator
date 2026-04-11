@@ -71,10 +71,7 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
         }}
         data-match-id={match.id}
         data-is-bye="true"
-      >
-        {/* Placeholder content to preserve intrinsic height; visibility:hidden hides it */}
-        <span className="text-sm">&nbsp;</span>
-      </div>
+      />
     );
   }
 
