@@ -234,8 +234,7 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle, siz
 
   // Double-sided needs an explicit minHeight so flex `justify-around` has vertical room
   // to distribute matches. Without it the container collapses to the content height of
-  // one column (~the finals column), which makes large brackets look cramped. Formula
-  // uses total participants from bracket.rounds[0] match count.
+  // the Finals column (a single card), making the West/East sides look cramped.
   const totalMatches = (bracket.rounds[0] || []).length;
   const approxParticipants = totalMatches * 2;
   const dsMinHeight = Math.max(500, approxParticipants * 25);
@@ -264,30 +263,35 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle, siz
         ))}
       </div>
 
-      {/* Finals in the center */}
-      <div className="flex flex-col items-center justify-center shrink-0 mx-4" style={{ minWidth: '220px' }}>
-        <div
-          className="text-xs font-bold uppercase tracking-wider mb-3 px-3 py-1 rounded-full"
-          style={{ color: theme.accent, background: theme.accent + '15' }}
-        >
-          Finals
-        </div>
-        {finals.map((match) => (
-          <BracketRound
-            key={match.id}
-            matches={[match]}
-            roundIndex={0}
-            totalRounds={1}
-            theme={theme}
-            onAdvanceWinner={onAdvanceWinner}
-            bracketSection="winners"
-            bracketStyle={bracketStyle}
-            label=""
-            sizing={sizing}
-            showSeeds={showSeeds}
-          />
-        ))}
-        <ChampionDisplay rounds={[finals]} theme={theme} showSeeds={showSeeds} />
+      {/* Finals in the center — wrapper mirrors West/East structure (flex items-stretch row)
+          so the BracketRound inside stretches vertically the same way, letting its internal
+          `flex-1 justify-around` align the Finals card at the same Y coordinate as the West/East
+          Semifinal cards. Previously this column used `flex flex-col justify-center` plus a
+          decorative "Finals" pill, which (a) duplicated the auto-rendered "Finals" label that
+          BracketRound already generates via getRoundLabel(0, 1) and (b) offset the Finals card
+          vertically relative to the Semifinal cards because the whole block was vertically
+          centered instead of the card.
+          ChampionDisplay is rendered absolutely so it doesn't consume row space — otherwise
+          the flex sibling would push the East side sideways once a winner exists, breaking
+          the symmetry of the double-sided layout. */}
+      <div className="relative flex items-stretch gap-0 mx-4">
+        <BracketRound
+          matches={finals}
+          roundIndex={0}
+          totalRounds={1}
+          theme={theme}
+          onAdvanceWinner={onAdvanceWinner}
+          bracketSection="winners"
+          bracketStyle={bracketStyle}
+          label="Finals"
+          sizing={sizing}
+          showSeeds={showSeeds}
+        />
+        {finals[0]?.winner && (
+          <div className="absolute left-1/2 -translate-x-1/2 -ml-8 top-full mt-2 z-20">
+            <ChampionDisplay rounds={[finals]} theme={theme} showSeeds={showSeeds} />
+          </div>
+        )}
       </div>
 
       {/* East side (right to left, reversed order) */}
