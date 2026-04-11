@@ -21,7 +21,6 @@ export default function App() {
   const [logo, setLogo] = useState(null);
   const [themeName, setThemeName] = useState('bw');
   const [bracketType, setBracketType] = useState('single');
-  const [bracketStyle, setBracketStyle] = useState('boxed');
   const [showSeeds, setShowSeeds] = useState(true);
   const [printMargin, setPrintMargin] = useState(1);
   const [layout, setLayout] = useState('standard');
@@ -92,8 +91,6 @@ export default function App() {
             setParticipantNames={setParticipantNames}
             bracketType={bracketType}
             setBracketType={setBracketType}
-            bracketStyle={bracketStyle}
-            setBracketStyle={setBracketStyle}
             showSeeds={showSeeds}
             setShowSeeds={setShowSeeds}
             printMargin={printMargin}
@@ -141,7 +138,6 @@ export default function App() {
                 bracket={bracket}
                 doubleBracket={doubleBracket}
                 bracketType={bracketType}
-                bracketStyle={bracketStyle}
                 layout={layout}
                 theme={theme}
                 title={title}

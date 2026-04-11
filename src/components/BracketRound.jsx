@@ -9,7 +9,6 @@ export default function BracketRound({
   onAdvanceWinner,
   bracketSection,
   label,
-  bracketStyle = 'boxed',
   sizing,
   showSeeds,
 }) {
@@ -32,7 +31,6 @@ export default function BracketRound({
             theme={theme}
             onAdvanceWinner={onAdvanceWinner}
             bracketSection={bracketSection}
-            bracketStyle={bracketStyle}
             sizing={sizing}
             showSeeds={showSeeds}
           />
