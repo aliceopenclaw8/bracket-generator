@@ -4,10 +4,19 @@ import BracketConnectors from './BracketConnectors';
 import { getRoundLabel } from '../utils/bracketLogic';
 import { splitBracketForDoubleSided } from '../utils/bracketLogic';
 
-function computeBracketSizing(firstRoundMatchCount) {
+function computeBracketSizing(firstRoundMatchCount, layout) {
   if (firstRoundMatchCount <= 2) return { cardW: 220, padY: 18, baseGap: 100, roundW: 260 };
   if (firstRoundMatchCount <= 4) return { cardW: 200, padY: 14, baseGap: 72, roundW: 240 };
-  if (firstRoundMatchCount <= 8) return { cardW: 192, padY: 8, baseGap: 32, roundW: 224 };
+  if (firstRoundMatchCount <= 8) {
+    // 16-team double-sided brackets place 8 first-round cards across the horizontal axis
+    // and overflow US Letter landscape width on PDF export when using the normal card size.
+    // Apply the compact sizing from the 33+ bucket ONLY for that specific case. All other
+    // 9-16 team brackets (including 16 Standard) keep the normal 192px card width.
+    if (firstRoundMatchCount === 8 && layout === 'double-sided') {
+      return { cardW: 160, padY: 3, baseGap: 8, roundW: 192 };
+    }
+    return { cardW: 192, padY: 8, baseGap: 32, roundW: 224 };
+  }
   if (firstRoundMatchCount <= 16) return { cardW: 176, padY: 5, baseGap: 16, roundW: 208 };
   return { cardW: 160, padY: 3, baseGap: 8, roundW: 192 };
 }
@@ -419,12 +428,13 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
   const effectiveCount = byeCount > firstRound.length / 2 && allRounds[1]
     ? allRounds[1].length
     : firstRound.length || 4;
-  const sizing = computeBracketSizing(effectiveCount);
+  const sizing = computeBracketSizing(effectiveCount, layout);
   // Auto-scale thresholds:
   // - Double-sided splits the bracket into west/east halves, so its natural width for N
-  //   teams is similar to a standard bracket for N/2 teams. That means DS can scale up
-  //   to one size larger (32 DS has the same effectiveCount=16 as standard 32, but its
-  //   natural width is ~2000px which overflows a 1456px viewport and NEEDS scaling).
+  //   teams is similar to a standard bracket for N/2 teams. DS brackets still overflow the
+  //   viewport past a certain size (even though they're narrower than Standard at the same
+  //   team count) because the halves plus finals still exceed the available width — so DS
+  //   gets auto-scale one bucket larger than Standard to keep it viewable without scroll.
   // - Standard layout: unchanged (scale up to 16 teams, scroll beyond).
   const shouldAutoScale = layout === 'double-sided'
     ? effectiveCount <= 16
