@@ -5,7 +5,12 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
   const prepareCapture = () => {
     const scaledEl = bracketRef.current?.querySelector('[data-auto-scale]');
     const overflowEl = bracketRef.current?.querySelector('.bracket-container');
-    let restore = null;
+    // Hide the "Tournament Bracket" title/badge header during capture. Keeping it would
+    // bloat the canvas vertically (header is ~80px tall) AND expand it horizontally
+    // (header has its own padding independent of bracket content), which caused the PDF
+    // to scale the bracket down to ~50% of the page with large whitespace margins.
+    const headerEl = bracketRef.current?.querySelector('.bracket-export-header');
+    const restoreFns = [];
     if (scaledEl) {
       const origTransform = scaledEl.style.transform;
       const origMarginR = scaledEl.style.marginRight;
@@ -17,15 +22,23 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       scaledEl.style.opacity = '1';
       // Temporarily remove overflow:hidden so unscaled content isn't clipped
       if (overflowEl) overflowEl.style.overflow = 'visible';
-      restore = () => {
+      restoreFns.push(() => {
         scaledEl.style.transform = origTransform;
         scaledEl.style.marginRight = origMarginR;
         scaledEl.style.marginBottom = origMarginB;
         scaledEl.style.opacity = origOpacity;
         if (overflowEl) overflowEl.style.overflow = '';
-      };
+      });
     }
-    return restore;
+    if (headerEl) {
+      const origDisplay = headerEl.style.display;
+      headerEl.style.display = 'none';
+      restoreFns.push(() => {
+        headerEl.style.display = origDisplay;
+      });
+    }
+    if (restoreFns.length === 0) return null;
+    return () => restoreFns.forEach(fn => fn());
   };
 
   const handlePNG = async () => {

@@ -21,6 +21,7 @@ function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketStyle, si
         }}
         onClick={handleClick}
         title={!isEmpty && onAdvance ? `Click to advance ${displayName}` : ''}
+        data-team-slot={position}
       >
         {showSeeds !== false && team?.seed && (
           <span
@@ -59,6 +60,7 @@ function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketStyle, si
       }}
       onClick={handleClick}
       title={!isEmpty && onAdvance ? `Click to advance ${displayName}` : ''}
+      data-team-slot={position}
     >
       {showSeeds !== false && team?.seed && (
         <span
@@ -94,6 +96,10 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
     // minHeight matches a regular 2-slot card so justify-around alignment is consistent
     const padY = sizing?.padY || 8;
     const minH = 2 * (2 * padY + 20) + 2;
+    // Byes are rendered with visibility:hidden so they preserve flex layout spacing
+    // (pair-midpoint alignment for R2 connectors depends on R1 slots occupying their
+    // normal vertical footprint) while being visually invisible to the user.
+    // data-is-bye marker lets BracketConnectors skip drawing lines from bye sources.
     return (
       <div
         className="flex items-center justify-center rounded-lg"
@@ -101,20 +107,13 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
           width: `${sizing?.cardW || 192}px`,
           padding: `${padY}px 8px`,
           minHeight: `${minH}px`,
-          border: `1px dashed ${theme.cardBorder}`,
-          background: theme.cardBg,
-          opacity: 0.5,
+          visibility: 'hidden',
         }}
         data-match-id={match.id}
+        data-is-bye="true"
       >
-        {showSeeds !== false && winner.seed && (
-          <span className="text-[10px] font-mono w-5 text-center shrink-0" style={{ color: theme.textMuted }}>
-            {winner.seed}
-          </span>
-        )}
-        <span className="text-sm truncate flex-1 font-medium" style={{ color: theme.text }}>
-          {winner.name || '\u2013'}
-        </span>
+        {/* Placeholder content to preserve intrinsic height; visibility:hidden hides it */}
+        <span className="text-sm">&nbsp;</span>
       </div>
     );
   }

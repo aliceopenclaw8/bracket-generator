@@ -110,7 +110,7 @@ function SingleBracket({ bracket, theme, onAdvanceWinner, bracketStyle, sizing, 
 
   return (
     <div className="relative" ref={containerRef}>
-      <BracketConnectors containerRef={containerRef} rounds={bracket.rounds} theme={theme} />
+      <BracketConnectors containerRef={containerRef} rounds={bracket.rounds} theme={theme} bracketStyle={bracketStyle} />
       <div className="flex items-stretch gap-0" style={{ padding: '20px 0' }}>
         {bracket.rounds.map((matches, roundIdx) => (
           <BracketRound
@@ -132,7 +132,7 @@ function SingleBracket({ bracket, theme, onAdvanceWinner, bracketStyle, sizing, 
   );
 }
 
-function FinalsConnectors({ containerRef, west, east, finals, theme }) {
+function FinalsConnectors({ containerRef, west, east, finals, theme, bracketStyle = 'boxed' }) {
   const [lines, setLines] = useState([]);
 
   useEffect(() => {
@@ -146,10 +146,26 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
       const scale = scaleEl ? parseFloat(scaleEl.dataset.autoScale) || 1 : 1;
       const newLines = [];
 
+      // Line style anchor: midpoint between the top slot's borderBottom and the bottom slot's
+      // borderBottom. Matches BracketConnectors behavior so finals connectors meet the
+      // team underlines instead of floating in the empty space between them.
+      const computeMatchY = (matchEl, matchRect) => {
+        if (bracketStyle === 'line') {
+          const topSlot = matchEl.querySelector('[data-team-slot="top"]');
+          const bottomSlot = matchEl.querySelector('[data-team-slot="bottom"]');
+          if (topSlot && bottomSlot) {
+            const topRect = topSlot.getBoundingClientRect();
+            const bottomRect = bottomSlot.getBoundingClientRect();
+            return ((topRect.bottom + bottomRect.bottom) / 2 - containerRect.top) / scale;
+          }
+        }
+        return (matchRect.top - containerRect.top + matchRect.height / 2) / scale;
+      };
+
       const finalsEl = container.querySelector(`[data-match-id="${finals[0].id}"]`);
       if (!finalsEl) return;
       const finalsRect = finalsEl.getBoundingClientRect();
-      const finalsCenterY = (finalsRect.top - containerRect.top + finalsRect.height / 2) / scale;
+      const finalsCenterY = computeMatchY(finalsEl, finalsRect);
 
       const drawConnector = (sources, targetX, targetY) => {
         if (sources.length === 0) return;
@@ -170,8 +186,9 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
         const sources = lastWest.map(m => {
           const el = container.querySelector(`[data-match-id="${m.id}"]`);
           if (!el) return null;
+          if (el.getAttribute('data-is-bye') === 'true') return null;
           const r = el.getBoundingClientRect();
-          return { x: (r.right - containerRect.left) / scale, y: (r.top - containerRect.top + r.height / 2) / scale };
+          return { x: (r.right - containerRect.left) / scale, y: computeMatchY(el, r) };
         }).filter(Boolean);
         drawConnector(sources, (finalsRect.left - containerRect.left) / scale, finalsCenterY);
       }
@@ -182,8 +199,9 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
         const sources = lastEast.map(m => {
           const el = container.querySelector(`[data-match-id="${m.id}"]`);
           if (!el) return null;
+          if (el.getAttribute('data-is-bye') === 'true') return null;
           const r = el.getBoundingClientRect();
-          return { x: (r.left - containerRect.left) / scale, y: (r.top - containerRect.top + r.height / 2) / scale };
+          return { x: (r.left - containerRect.left) / scale, y: computeMatchY(el, r) };
         }).filter(Boolean);
         drawConnector(sources, (finalsRect.right - containerRect.left) / scale, finalsCenterY);
       }
@@ -195,7 +213,7 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
     const observer = new ResizeObserver(updateLines);
     observer.observe(container);
     return () => { clearTimeout(timer); observer.disconnect(); };
-  }, [containerRef, west, east, finals, theme]);
+  }, [containerRef, west, east, finals, theme, bracketStyle]);
 
   return (
     <svg className="absolute inset-0 pointer-events-none"
@@ -214,13 +232,21 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle, siz
   const eastRef = useRef(null);
   const outerRef = useRef(null);
 
+  // Double-sided needs an explicit minHeight so flex `justify-around` has vertical room
+  // to distribute matches. Without it the container collapses to the content height of
+  // one column (~the finals column), which makes large brackets look cramped. Formula
+  // uses total participants from bracket.rounds[0] match count.
+  const totalMatches = (bracket.rounds[0] || []).length;
+  const approxParticipants = totalMatches * 2;
+  const dsMinHeight = Math.max(500, approxParticipants * 25);
+
   return (
-    <div className="relative flex items-stretch gap-0" style={{ padding: '20px 0' }} ref={outerRef}>
-      <FinalsConnectors containerRef={outerRef} west={west} east={east} finals={finals} theme={theme} />
+    <div className="relative flex items-stretch gap-0" style={{ padding: '20px 0', minHeight: `${dsMinHeight}px` }} ref={outerRef}>
+      <FinalsConnectors containerRef={outerRef} west={west} east={east} finals={finals} theme={theme} bracketStyle={bracketStyle} />
 
       {/* West side (left to right) */}
       <div className="relative flex items-stretch gap-0" ref={westRef}>
-        <BracketConnectors containerRef={westRef} rounds={west} theme={theme} />
+        <BracketConnectors containerRef={westRef} rounds={west} theme={theme} bracketStyle={bracketStyle} />
         {west.map((matches, roundIdx) => (
           <BracketRound
             key={`west-${roundIdx}`}
@@ -266,7 +292,7 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, bracketStyle, siz
 
       {/* East side (right to left, reversed order) */}
       <div className="relative flex items-stretch gap-0 flex-row-reverse" ref={eastRef}>
-        <BracketConnectors containerRef={eastRef} rounds={east} theme={theme} mirrored />
+        <BracketConnectors containerRef={eastRef} rounds={east} theme={theme} mirrored bracketStyle={bracketStyle} />
         {east.map((matches, roundIdx) => (
           <BracketRound
             key={`east-${roundIdx}`}
@@ -303,7 +329,7 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle, si
           Winners Bracket
         </div>
         <div className="relative" ref={winnersRef}>
-          <BracketConnectors containerRef={winnersRef} rounds={doubleBracket.winnersRounds} theme={theme} />
+          <BracketConnectors containerRef={winnersRef} rounds={doubleBracket.winnersRounds} theme={theme} bracketStyle={bracketStyle} />
           <div className="flex items-stretch gap-0" style={{ padding: '12px 0' }}>
             {doubleBracket.winnersRounds.map((matches, roundIdx) => (
               <BracketRound
@@ -333,7 +359,7 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, bracketStyle, si
           Losers Bracket
         </div>
         <div className="relative" ref={losersRef}>
-          <BracketConnectors containerRef={losersRef} rounds={doubleBracket.losersRounds} theme={theme} />
+          <BracketConnectors containerRef={losersRef} rounds={doubleBracket.losersRounds} theme={theme} bracketStyle={bracketStyle} />
           <div className="flex items-stretch gap-0" style={{ padding: '12px 0' }}>
             {doubleBracket.losersRounds.map((matches, roundIdx) => (
               <BracketRound
@@ -390,8 +416,15 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
     ? allRounds[1].length
     : firstRound.length || 4;
   const sizing = computeBracketSizing(effectiveCount);
-  // Auto-scale for ≤16 teams (effectiveCount ≤ 8), scroll for larger brackets
-  const shouldAutoScale = effectiveCount <= 8;
+  // Auto-scale thresholds:
+  // - Double-sided splits the bracket into west/east halves, so its natural width for N
+  //   teams is similar to a standard bracket for N/2 teams. That means DS can scale up
+  //   to one size larger (32 DS has the same effectiveCount=16 as standard 32, but its
+  //   natural width is ~2000px which overflows a 1456px viewport and NEEDS scaling).
+  // - Standard layout: unchanged (scale up to 16 teams, scroll beyond).
+  const shouldAutoScale = layout === 'double-sided'
+    ? effectiveCount <= 16
+    : effectiveCount <= 8;
 
   return (
     <div
@@ -403,7 +436,7 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
     >
       {/* Bracket Header */}
       <div
-        className="flex items-center gap-3 px-6 py-4 border-b"
+        className="bracket-export-header flex items-center gap-3 px-6 py-4 border-b"
         style={{ borderColor: theme.cardBorder, background: theme.headerBg }}
       >
         {logo && (

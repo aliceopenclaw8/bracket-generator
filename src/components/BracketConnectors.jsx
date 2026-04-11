@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-export default function BracketConnectors({ containerRef, rounds, theme, mirrored = false }) {
+export default function BracketConnectors({ containerRef, rounds, theme, mirrored = false, bracketStyle = 'boxed' }) {
   const [lines, setLines] = useState([]);
   const svgRef = useRef(null);
 
@@ -17,6 +17,26 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
       const scale = scaleEl ? parseFloat(scaleEl.dataset.autoScale) || 1 : 1;
       const newLines = [];
 
+      // Line style: team names are rendered as rows with borderBottom lines rather than
+      // inside a card box. The visual anchor is the gap BETWEEN the top slot's borderBottom
+      // and the bottom slot's borderBottom (not the card's vertical midpoint). Query the
+      // actual [data-team-slot] elements to compute the correct Y.
+      const computeMatchY = (matchEl, matchRect) => {
+        if (bracketStyle === 'line') {
+          const topSlot = matchEl.querySelector('[data-team-slot="top"]');
+          const bottomSlot = matchEl.querySelector('[data-team-slot="bottom"]');
+          if (topSlot && bottomSlot) {
+            const topRect = topSlot.getBoundingClientRect();
+            const bottomRect = bottomSlot.getBoundingClientRect();
+            // Midpoint between top slot's bottom edge (its borderBottom) and bottom slot's
+            // bottom edge (its borderBottom) — this is the "visual center" where a connector
+            // tee would meet the team underlines.
+            return ((topRect.bottom + bottomRect.bottom) / 2 - containerRect.top) / scale;
+          }
+        }
+        return (matchRect.top - containerRect.top + matchRect.height / 2) / scale;
+      };
+
       // For each round after the first, connect matches to their feeder matches
       for (let r = 1; r < rounds.length; r++) {
         for (let m = 0; m < rounds[r].length; m++) {
@@ -27,7 +47,7 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
           const targetX = mirrored
             ? (matchRect.right - containerRect.left) / scale
             : (matchRect.left - containerRect.left) / scale;
-          const targetY = (matchRect.top - containerRect.top + matchRect.height / 2) / scale;
+          const targetY = computeMatchY(matchEl, matchRect);
 
           // Detect merge round (same count = 1:1) vs reduce round (halved = 2:1)
           const isMergeRound = rounds[r].length === rounds[r - 1].length;
@@ -38,12 +58,15 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
             .map(idx => {
               const el = container.querySelector(`[data-match-id="${rounds[r - 1][idx].id}"]`);
               if (!el) return null;
+              // Skip drawing connectors from bye source matches — they have no real team
+              // matchup, so the line would look like it's floating from nowhere.
+              if (el.getAttribute('data-is-bye') === 'true') return null;
               const rect = el.getBoundingClientRect();
               return {
                 x: mirrored
                   ? (rect.left - containerRect.left) / scale
                   : (rect.right - containerRect.left) / scale,
-                y: (rect.top - containerRect.top + rect.height / 2) / scale,
+                y: computeMatchY(el, rect),
               };
             })
             .filter(Boolean);
@@ -100,7 +123,7 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
       clearTimeout(timer);
       observer.disconnect();
     };
-  }, [containerRef, rounds, theme, mirrored]);
+  }, [containerRef, rounds, theme, mirrored, bracketStyle]);
 
   return (
     <svg

@@ -97,7 +97,7 @@ export default function SetupPanel({
       </div>
 
       {/* Bracket Type Toggle */}
-      <div className="mb-6">
+      <div className="mb-5">
         <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
           Bracket Type
         </label>
@@ -109,7 +109,7 @@ export default function SetupPanel({
             <button
               key={opt.value}
               onClick={() => setBracketType(opt.value)}
-              className="flex-1 py-3 px-4 text-sm font-medium transition-all cursor-pointer"
+              className="flex-1 py-2 px-3 text-sm font-medium transition-all cursor-pointer"
               style={{
                 background: bracketType === opt.value ? theme.accent : theme.cardBg,
                 color: bracketType === opt.value ? theme.winnerText : theme.text,
@@ -122,7 +122,7 @@ export default function SetupPanel({
       </div>
 
       {/* Bracket Style Toggle */}
-      <div className="mb-6">
+      <div className="mb-5">
         <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
           Bracket Style
         </label>
@@ -134,7 +134,7 @@ export default function SetupPanel({
             <button
               key={opt.value}
               onClick={() => setBracketStyle(opt.value)}
-              className="flex-1 py-3 px-4 text-sm font-medium transition-all cursor-pointer"
+              className="flex-1 py-2 px-3 text-sm font-medium transition-all cursor-pointer"
               style={{
                 background: bracketStyle === opt.value ? theme.accent : theme.cardBg,
                 color: bracketStyle === opt.value ? theme.winnerText : theme.text,
@@ -148,7 +148,7 @@ export default function SetupPanel({
 
       {/* Layout Toggle */}
       {bracketType === 'single' && participantNames.length >= 8 && (
-        <div className="mb-6">
+        <div className="mb-5">
           <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
             Layout
           </label>
@@ -160,7 +160,7 @@ export default function SetupPanel({
               <button
                 key={opt.value}
                 onClick={() => setLayout(opt.value)}
-                className="flex-1 py-3 px-4 text-sm font-medium transition-all cursor-pointer"
+                className="flex-1 py-2 px-3 text-sm font-medium transition-all cursor-pointer"
                 style={{
                   background: layout === opt.value ? theme.accent : theme.cardBg,
                   color: layout === opt.value ? theme.winnerText : theme.text,
@@ -174,7 +174,7 @@ export default function SetupPanel({
       )}
 
       {/* Seeded / Unseeded Toggle */}
-      <div className="mb-6">
+      <div className="mb-5">
         <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
           Seed Display
         </label>
@@ -186,7 +186,7 @@ export default function SetupPanel({
             <button
               key={String(opt.value)}
               onClick={() => setShowSeeds(opt.value)}
-              className="flex-1 py-3 px-4 text-sm font-medium transition-all cursor-pointer"
+              className="flex-1 py-2 px-3 text-sm font-medium transition-all cursor-pointer"
               style={{
                 background: showSeeds === opt.value ? theme.accent : theme.cardBg,
                 color: showSeeds === opt.value ? theme.winnerText : theme.text,
@@ -199,7 +199,7 @@ export default function SetupPanel({
       </div>
 
       {/* Print Margin */}
-      <div className="mb-6">
+      <div className="mb-5">
         <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
           Print Margin
         </label>
@@ -211,7 +211,7 @@ export default function SetupPanel({
             <button
               key={opt.value}
               onClick={() => setPrintMargin(opt.value)}
-              className="flex-1 py-3 px-4 text-sm font-medium transition-all cursor-pointer"
+              className="flex-1 py-2 px-3 text-sm font-medium transition-all cursor-pointer"
               style={{
                 background: printMargin === opt.value ? theme.accent : theme.cardBg,
                 color: printMargin === opt.value ? theme.winnerText : theme.text,
@@ -224,7 +224,7 @@ export default function SetupPanel({
       </div>
 
       {/* Theme Picker */}
-      <div className="mb-6">
+      <div className="mb-5">
         <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
           Color Theme
         </label>
@@ -241,7 +241,7 @@ export default function SetupPanel({
             <button
               key={n}
               onClick={() => handlePreset(n)}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer"
+              className="px-4 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer"
               style={{
                 background: participantNames.length === n ? theme.accent + '33' : theme.cardBg,
                 border: `1px solid ${participantNames.length === n ? theme.accent : theme.cardBorder}`,
@@ -286,7 +286,7 @@ export default function SetupPanel({
       </div>
 
       {/* Participants List */}
-      <div className="mb-6">
+      <div className="mb-5">
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-medium" style={{ color: theme.textMuted }}>
             Participants ({validCount})
@@ -395,7 +395,7 @@ export default function SetupPanel({
       <button
         onClick={onGenerate}
         disabled={validCount < 2}
-        className="w-full py-4 rounded-xl text-lg font-bold transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        className="w-full py-3 rounded-xl text-lg font-bold transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         style={{
           background: theme.accent,
           color: theme.winnerText,
