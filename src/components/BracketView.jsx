@@ -1,24 +1,33 @@
 import { useRef, useEffect, useState } from 'react';
 import BracketRound from './BracketRound';
 import BracketConnectors from './BracketConnectors';
+import { Pill } from './MatchCard';
 import { getRoundLabel } from '../utils/bracketLogic';
 import { splitBracketForDoubleSided } from '../utils/bracketLogic';
 
-function computeBracketSizing(firstRoundMatchCount, layout) {
-  if (firstRoundMatchCount <= 2) return { cardW: 220, padY: 18, baseGap: 100, roundW: 260 };
-  if (firstRoundMatchCount <= 4) return { cardW: 200, padY: 14, baseGap: 72, roundW: 240 };
-  if (firstRoundMatchCount <= 8) {
-    // 16-team double-sided brackets place 8 first-round cards across the horizontal axis
-    // and overflow US Letter landscape width on PDF export when using the normal card size.
-    // Apply the compact sizing from the 33+ bucket ONLY for that specific case. All other
-    // 9-16 team brackets (including 16 Standard) keep the normal 192px card width.
-    if (firstRoundMatchCount === 8 && layout === 'double-sided') {
-      return { cardW: 160, padY: 3, baseGap: 8, roundW: 192 };
-    }
-    return { cardW: 192, padY: 8, baseGap: 32, roundW: 224 };
+function computeBracketSizing(firstRoundMatchCount, layout, bracketType) {
+  // Compact padY is OK since overflow-hidden was removed from cards. The +8 paddingBottom
+  // in TeamSlot and SVG SeedBadge baseline positioning handle descender rendering.
+  if (layout === 'double-sided') {
+    if (firstRoundMatchCount <= 4) return { cardW: 200, padY: 14, baseGap: 48, roundW: 240 };
+    if (firstRoundMatchCount <= 8) return { cardW: 170, padY: 10, baseGap: 12, roundW: 200 };
+    if (firstRoundMatchCount <= 16) return { cardW: 150, padY: 8, baseGap: 6, roundW: 180 };
+    return { cardW: 140, padY: 8, baseGap: 4, roundW: 165 };
   }
-  if (firstRoundMatchCount <= 16) return { cardW: 176, padY: 5, baseGap: 16, roundW: 208 };
-  return { cardW: 160, padY: 3, baseGap: 8, roundW: 192 };
+  // DE renders side-by-side (winners | GF | losers) — compact sizing like DS.
+  if (bracketType === 'double') {
+    if (firstRoundMatchCount <= 4) return { cardW: 200, padY: 12, baseGap: 32, roundW: 240 };
+    if (firstRoundMatchCount <= 8) return { cardW: 180, padY: 10, baseGap: 16, roundW: 210 };
+    if (firstRoundMatchCount <= 16) return { cardW: 160, padY: 9, baseGap: 10, roundW: 190 };
+    return { cardW: 140, padY: 8, baseGap: 6, roundW: 165 };
+  }
+  // Standard SE (one-sided) — generous padY for small brackets so they fill the
+  // full landscape page height (like print brackets with tall write-in slots).
+  if (firstRoundMatchCount <= 2) return { cardW: 300, padY: 55, baseGap: 100, roundW: 420 };
+  if (firstRoundMatchCount <= 4) return { cardW: 280, padY: 42, baseGap: 72, roundW: 340 };
+  if (firstRoundMatchCount <= 8) return { cardW: 220, padY: 12, baseGap: 32, roundW: 260 };
+  if (firstRoundMatchCount <= 16) return { cardW: 200, padY: 10, baseGap: 16, roundW: 240 };
+  return { cardW: 200, padY: 5, baseGap: 8, roundW: 270 };
 }
 
 function AutoScaleWrapper({ children, enabled }) {
@@ -114,13 +123,16 @@ function ChampionDisplay({ rounds, theme, showSeeds }) {
   );
 }
 
-function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds }) {
+function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
   const containerRef = useRef(null);
+  // minHeight prevents tiny brackets on PDF — gives justify-around room to distribute matches
+  const firstRoundCount = (bracket.rounds[0] || []).length;
+  const minH = Math.max(450, firstRoundCount * 95);
 
   return (
     <div className="relative" ref={containerRef}>
-      <BracketConnectors containerRef={containerRef} rounds={bracket.rounds} theme={theme} />
-      <div className="flex items-stretch gap-0" style={{ padding: '20px 0' }}>
+      <BracketConnectors containerRef={containerRef} rounds={bracket.rounds} theme={theme} bracketStyle={bracketStyle} />
+      <div className="flex items-stretch gap-0" style={{ padding: '20px 0', minHeight: `${minH}px` }}>
         {bracket.rounds.map((matches, roundIdx) => (
           <BracketRound
             key={roundIdx}
@@ -132,6 +144,8 @@ function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds }) {
             bracketSection="winners"
             sizing={sizing}
             showSeeds={showSeeds}
+            isChampionship={roundIdx === bracket.rounds.length - 1 && matches.length === 1}
+            bracketStyle={bracketStyle}
           />
         ))}
         <ChampionDisplay rounds={bracket.rounds} theme={theme} showSeeds={showSeeds} />
@@ -140,7 +154,7 @@ function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds }) {
   );
 }
 
-function FinalsConnectors({ containerRef, west, east, finals, theme }) {
+function FinalsConnectors({ containerRef, west, east, finals, theme, bracketStyle = 'boxed' }) {
   const [lines, setLines] = useState([]);
 
   useEffect(() => {
@@ -157,8 +171,21 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
       const finalsEl = container.querySelector(`[data-match-id="${finals[0].id}"]`);
       if (!finalsEl) return;
       const finalsRect = finalsEl.getBoundingClientRect();
-      // Vertical midpoint of match card — connector anchor
-      const finalsCenterY = (finalsRect.top - containerRect.top + finalsRect.height / 2) / scale;
+
+      const computeMatchY = (matchEl, matchRect) => {
+        if (bracketStyle === 'line') {
+          const topSlot = matchEl.querySelector('[data-team-slot="top"]');
+          const bottomSlot = matchEl.querySelector('[data-team-slot="bottom"]');
+          if (topSlot && bottomSlot) {
+            const topRect = topSlot.getBoundingClientRect();
+            const bottomRect = bottomSlot.getBoundingClientRect();
+            return ((topRect.bottom + bottomRect.bottom) / 2 - containerRect.top) / scale;
+          }
+        }
+        return (matchRect.top - containerRect.top + matchRect.height / 2) / scale;
+      };
+
+      const finalsCenterY = computeMatchY(finalsEl, finalsRect);
 
       const drawConnector = (sources, targetX, targetY) => {
         if (sources.length === 0) return;
@@ -183,7 +210,7 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
           const r = el.getBoundingClientRect();
           return {
             x: (r.right - containerRect.left) / scale,
-            y: (r.top - containerRect.top + r.height / 2) / scale,
+            y: computeMatchY(el, r),
           };
         }).filter(Boolean);
         drawConnector(sources, (finalsRect.left - containerRect.left) / scale, finalsCenterY);
@@ -199,7 +226,7 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
           const r = el.getBoundingClientRect();
           return {
             x: (r.left - containerRect.left) / scale,
-            y: (r.top - containerRect.top + r.height / 2) / scale,
+            y: computeMatchY(el, r),
           };
         }).filter(Boolean);
         drawConnector(sources, (finalsRect.right - containerRect.left) / scale, finalsCenterY);
@@ -212,7 +239,7 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
     const observer = new ResizeObserver(updateLines);
     observer.observe(container);
     return () => { clearTimeout(timer); observer.disconnect(); };
-  }, [containerRef, west, east, finals, theme]);
+  }, [containerRef, west, east, finals, theme, bracketStyle]);
 
   return (
     <svg className="absolute inset-0 pointer-events-none"
@@ -225,7 +252,7 @@ function FinalsConnectors({ containerRef, west, east, finals, theme }) {
   );
 }
 
-function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds }) {
+function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
   const { west, east, finals } = splitBracketForDoubleSided(bracket.rounds);
   const westRef = useRef(null);
   const eastRef = useRef(null);
@@ -240,11 +267,11 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
 
   return (
     <div className="relative flex items-stretch gap-0" style={{ padding: '20px 0', minHeight: `${dsMinHeight}px` }} ref={outerRef}>
-      <FinalsConnectors containerRef={outerRef} west={west} east={east} finals={finals} theme={theme} />
+      <FinalsConnectors containerRef={outerRef} west={west} east={east} finals={finals} theme={theme} bracketStyle={bracketStyle} />
 
       {/* West side (left to right) */}
       <div className="relative flex items-stretch gap-0" ref={westRef}>
-        <BracketConnectors containerRef={westRef} rounds={west} theme={theme} />
+        <BracketConnectors containerRef={westRef} rounds={west} theme={theme} bracketStyle={bracketStyle} />
         {west.map((matches, roundIdx) => (
           <BracketRound
             key={`west-${roundIdx}`}
@@ -257,6 +284,7 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
             label={getRoundLabel(roundIdx, bracket.rounds.length)}
             sizing={sizing}
             showSeeds={showSeeds}
+            bracketStyle={bracketStyle}
           />
         ))}
       </div>
@@ -283,6 +311,8 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
           label="Finals"
           sizing={sizing}
           showSeeds={showSeeds}
+          isChampionship
+          bracketStyle={bracketStyle}
         />
         {finals[0]?.winner && (
           <div className="absolute left-1/2 -translate-x-1/2 -ml-8 top-full mt-2 z-20">
@@ -293,7 +323,7 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
 
       {/* East side (right to left, reversed order) */}
       <div className="relative flex items-stretch gap-0 flex-row-reverse" ref={eastRef}>
-        <BracketConnectors containerRef={eastRef} rounds={east} theme={theme} mirrored />
+        <BracketConnectors containerRef={eastRef} rounds={east} theme={theme} mirrored bracketStyle={bracketStyle} />
         {east.map((matches, roundIdx) => (
           <BracketRound
             key={`east-${roundIdx}`}
@@ -306,6 +336,7 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
             label={getRoundLabel(roundIdx, bracket.rounds.length)}
             sizing={sizing}
             showSeeds={showSeeds}
+            bracketStyle={bracketStyle}
           />
         ))}
       </div>
@@ -313,80 +344,67 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
   );
 }
 
-function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, sizing, showSeeds }) {
+function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
   const winnersRef = useRef(null);
   const losersRef = useRef(null);
+  const outerRef = useRef(null);
+
+  // Losers bracket uses smaller cards for visual hierarchy (minimum 140px for legibility)
+  const losersSizing = {
+    cardW: Math.max(140, Math.round(sizing.cardW * 0.7)),
+    padY: Math.max(3, Math.round(sizing.padY * 0.65)),
+    baseGap: sizing.baseGap,
+    roundW: Math.max(168, Math.round(sizing.roundW * 0.7)),
+  };
+
+  // minHeight gives justify-around room to distribute matches vertically
+  const winnersR1Count = (doubleBracket.winnersRounds[0] || []).length;
+  const minH = Math.max(600, winnersR1Count * 2 * 35);
 
   return (
-    <div className="space-y-4">
-
-      {/* Winners Bracket */}
-      <div>
-        <div
-          className="inline-block text-sm font-bold uppercase tracking-wider mb-2 px-3 py-1 rounded-full"
-          style={{ color: theme.accent, background: theme.accent + '15' }}
-        >
-          Winners Bracket
-        </div>
-        <div className="relative" ref={winnersRef}>
-          <BracketConnectors containerRef={winnersRef} rounds={doubleBracket.winnersRounds} theme={theme} />
-          <div className="flex items-stretch gap-0" style={{ padding: '12px 0' }}>
-            {doubleBracket.winnersRounds.map((matches, roundIdx) => (
-              <BracketRound
-                key={roundIdx}
-                matches={matches}
-                roundIndex={roundIdx}
-                totalRounds={doubleBracket.winnersRounds.length}
-                theme={theme}
-                onAdvanceWinner={onAdvanceWinner}
-                bracketSection="winners"
-                label={getRoundLabel(roundIdx, doubleBracket.winnersRounds.length)}
-                sizing={sizing}
-                showSeeds={showSeeds}
-              />
-            ))}
-          </div>
-        </div>
+    <div>
+      {/* Section labels */}
+      <div className="flex justify-between items-center mb-1 px-1">
+        <Pill text="Winners Bracket" color={theme.accent} bg={theme.accent + '15'} fontSize={12} paddingX={14} />
+        <Pill text="Losers Bracket" color={theme.textMuted} bg={theme.textMuted + '15'} fontSize={12} paddingX={14} />
       </div>
 
-      {/* Losers Bracket */}
-      <div>
-        <div
-          className="inline-block text-sm font-bold uppercase tracking-wider mb-2 px-3 py-1 rounded-full"
-          style={{ color: theme.textMuted, background: theme.textMuted + '15' }}
-        >
-          Losers Bracket
-        </div>
-        <div className="relative" ref={losersRef}>
-          <BracketConnectors containerRef={losersRef} rounds={doubleBracket.losersRounds} theme={theme} />
-          <div className="flex items-stretch gap-0" style={{ padding: '12px 0' }}>
-            {doubleBracket.losersRounds.map((matches, roundIdx) => (
-              <BracketRound
-                key={roundIdx}
-                matches={matches}
-                roundIndex={roundIdx}
-                totalRounds={doubleBracket.losersRounds.length}
-                theme={theme}
-                onAdvanceWinner={onAdvanceWinner}
-                bracketSection="losers"
-                label={`Losers R${roundIdx + 1}`}
-                sizing={sizing}
-                showSeeds={showSeeds}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Side-by-side: Winners (L→R) | GF (center) | Losers (R→L) */}
+      <div className="relative flex items-stretch gap-0"
+           style={{ padding: '12px 0', minHeight: `${minH}px` }}
+           ref={outerRef}>
 
-      {/* Grand Finals */}
-      <div>
-        <div
-          className="inline-block text-sm font-bold uppercase tracking-wider mb-2 px-3 py-1 rounded-full"
-          style={{ color: theme.accent, background: theme.accent + '15' }}
-        >
-          Grand Finals
+        <FinalsConnectors
+          containerRef={outerRef}
+          west={doubleBracket.winnersRounds}
+          east={doubleBracket.losersRounds}
+          finals={doubleBracket.grandFinals}
+          theme={theme}
+          bracketStyle={bracketStyle}
+        />
+
+        {/* Winners bracket (left to right) */}
+        <div className="relative flex items-stretch gap-0" ref={winnersRef}>
+          <BracketConnectors containerRef={winnersRef} rounds={doubleBracket.winnersRounds} theme={theme} bracketStyle={bracketStyle} />
+          {doubleBracket.winnersRounds.map((matches, roundIdx) => (
+            <BracketRound
+              key={`w-${roundIdx}`}
+              matches={matches}
+              roundIndex={roundIdx}
+              totalRounds={doubleBracket.winnersRounds.length}
+              theme={theme}
+              onAdvanceWinner={onAdvanceWinner}
+              bracketSection="winners"
+              label={getRoundLabel(roundIdx, doubleBracket.winnersRounds.length)}
+              sizing={sizing}
+              showSeeds={showSeeds}
+              bracketStyle={bracketStyle}
+            />
+          ))}
         </div>
-        <div className="flex items-center gap-4 py-2">
+
+        {/* Grand Finals (center) */}
+        <div className="relative flex items-stretch gap-0 mx-4">
           <BracketRound
             matches={doubleBracket.grandFinals}
             roundIndex={0}
@@ -397,14 +415,36 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, sizing, showSeed
             label="Grand Finals"
             sizing={sizing}
             showSeeds={showSeeds}
+            isChampionship
+            bracketStyle={bracketStyle}
           />
+        </div>
+
+        {/* Losers bracket (right to left, mirrored) */}
+        <div className="relative flex items-stretch gap-0 flex-row-reverse" ref={losersRef}>
+          <BracketConnectors containerRef={losersRef} rounds={doubleBracket.losersRounds} theme={theme} mirrored bracketStyle={bracketStyle} />
+          {doubleBracket.losersRounds.map((matches, roundIdx) => (
+            <BracketRound
+              key={`l-${roundIdx}`}
+              matches={matches}
+              roundIndex={roundIdx}
+              totalRounds={doubleBracket.losersRounds.length}
+              theme={theme}
+              onAdvanceWinner={onAdvanceWinner}
+              bracketSection="losers"
+              label={`Losers R${roundIdx + 1}`}
+              sizing={losersSizing}
+              showSeeds={showSeeds}
+              bracketStyle={bracketStyle}
+            />
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-export default function BracketView({ bracket, doubleBracket, bracketType, layout, theme, title, logo, onAdvanceWinner, showSeeds }) {
+export default function BracketView({ bracket, doubleBracket, bracketType, bracketStyle, layout, theme, title, logo, onAdvanceWinner, showSeeds }) {
   // Use effective match count for sizing (skip bye-dominated first rounds)
   const allRounds = bracket?.rounds || doubleBracket?.winnersRounds || [];
   const firstRound = allRounds[0] || [];
@@ -412,7 +452,7 @@ export default function BracketView({ bracket, doubleBracket, bracketType, layou
   const effectiveCount = byeCount > firstRound.length / 2 && allRounds[1]
     ? allRounds[1].length
     : firstRound.length || 4;
-  const sizing = computeBracketSizing(effectiveCount, layout);
+  const sizing = computeBracketSizing(effectiveCount, layout, bracketType);
   // Auto-scale thresholds:
   // - Double-sided splits the bracket into west/east halves, so its natural width for N
   //   teams is similar to a standard bracket for N/2 teams. DS brackets still overflow the
@@ -420,9 +460,9 @@ export default function BracketView({ bracket, doubleBracket, bracketType, layou
   //   team count) because the halves plus finals still exceed the available width — so DS
   //   gets auto-scale one bucket larger than Standard to keep it viewable without scroll.
   // - Standard layout: unchanged (scale up to 16 teams, scroll beyond).
-  const shouldAutoScale = layout === 'double-sided'
-    ? effectiveCount <= 16
-    : effectiveCount <= 8;
+  const shouldAutoScale = (layout === 'double-sided' || bracketType === 'double')
+    ? effectiveCount <= 32
+    : effectiveCount <= 16;
 
   return (
     <div
@@ -455,13 +495,13 @@ export default function BracketView({ bracket, doubleBracket, bracketType, layou
       <div className={`p-6 ${shouldAutoScale ? '' : 'overflow-x-auto bracket-scroll'}`}>
         <AutoScaleWrapper enabled={shouldAutoScale}>
           {bracketType === 'single' && bracket && layout === 'double-sided' && (
-            <DoubleSidedBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} />
+            <DoubleSidedBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} />
           )}
           {bracketType === 'single' && bracket && layout !== 'double-sided' && (
-            <SingleBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} />
+            <SingleBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} />
           )}
           {bracketType === 'double' && doubleBracket && (
-            <DoubleBracket doubleBracket={doubleBracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} />
+            <DoubleBracket doubleBracket={doubleBracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} />
           )}
         </AutoScaleWrapper>
       </div>

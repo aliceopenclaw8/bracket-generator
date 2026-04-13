@@ -24,6 +24,7 @@ export default function App() {
   const [showSeeds, setShowSeeds] = useState(true);
   const [printMargin, setPrintMargin] = useState(1);
   const [layout, setLayout] = useState('standard');
+  const [bracketStyle, setBracketStyle] = useState('boxed');
   const [participantNames, setParticipantNames] = useState(DEFAULT_PARTICIPANTS);
   const [bracket, setBracket] = useState(null);
   const [doubleBracket, setDoubleBracket] = useState(null);
@@ -97,6 +98,8 @@ export default function App() {
             setPrintMargin={setPrintMargin}
             layout={layout}
             setLayout={setLayout}
+            bracketStyle={bracketStyle}
+            setBracketStyle={setBracketStyle}
             onGenerate={handleGenerate}
             theme={theme}
             themeName={themeName}
@@ -138,6 +141,7 @@ export default function App() {
                 bracket={bracket}
                 doubleBracket={doubleBracket}
                 bracketType={bracketType}
+                bracketStyle={bracketStyle}
                 layout={layout}
                 theme={theme}
                 title={title}

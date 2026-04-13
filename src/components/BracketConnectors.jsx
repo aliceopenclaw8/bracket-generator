@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export default function BracketConnectors({ containerRef, rounds, theme, mirrored = false }) {
+export default function BracketConnectors({ containerRef, rounds, theme, mirrored = false, bracketStyle }) {
   const [lines, setLines] = useState([]);
 
   useEffect(() => {
@@ -16,6 +16,21 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
       const scale = scaleEl ? parseFloat(scaleEl.dataset.autoScale) || 1 : 1;
       const newLines = [];
 
+      // Line style: anchor at midpoint between the two team slot underlines.
+      // Boxed style: anchor at vertical midpoint of the card.
+      const computeMatchY = (matchEl, matchRect) => {
+        if (bracketStyle === 'line') {
+          const topSlot = matchEl.querySelector('[data-team-slot="top"]');
+          const bottomSlot = matchEl.querySelector('[data-team-slot="bottom"]');
+          if (topSlot && bottomSlot) {
+            const topRect = topSlot.getBoundingClientRect();
+            const bottomRect = bottomSlot.getBoundingClientRect();
+            return ((topRect.bottom + bottomRect.bottom) / 2 - containerRect.top) / scale;
+          }
+        }
+        return (matchRect.top - containerRect.top + matchRect.height / 2) / scale;
+      };
+
       // For each round after the first, connect matches to their feeder matches
       for (let r = 1; r < rounds.length; r++) {
         for (let m = 0; m < rounds[r].length; m++) {
@@ -26,8 +41,7 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
           const targetX = mirrored
             ? (matchRect.right - containerRect.left) / scale
             : (matchRect.left - containerRect.left) / scale;
-          // Vertical midpoint of match card — connector anchor
-          const targetY = (matchRect.top - containerRect.top + matchRect.height / 2) / scale;
+          const targetY = computeMatchY(matchEl, matchRect);
 
           // Detect merge round (same count = 1:1) vs reduce round (halved = 2:1)
           const isMergeRound = rounds[r].length === rounds[r - 1].length;
@@ -46,7 +60,7 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
                 x: mirrored
                   ? (rect.left - containerRect.left) / scale
                   : (rect.right - containerRect.left) / scale,
-                y: (rect.top - containerRect.top + rect.height / 2) / scale,
+                y: computeMatchY(el, rect),
               };
             })
             .filter(Boolean);
@@ -103,7 +117,7 @@ export default function BracketConnectors({ containerRef, rounds, theme, mirrore
       clearTimeout(timer);
       observer.disconnect();
     };
-  }, [containerRef, rounds, theme, mirrored]);
+  }, [containerRef, rounds, theme, mirrored, bracketStyle]);
 
   return (
     <svg

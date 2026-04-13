@@ -14,6 +14,8 @@ export default function SetupPanel({
   setPrintMargin,
   layout,
   setLayout,
+  bracketStyle,
+  setBracketStyle,
   onGenerate,
   theme,
   themeName,
@@ -111,6 +113,31 @@ export default function SetupPanel({
               style={{
                 background: bracketType === opt.value ? theme.accent : theme.cardBg,
                 color: bracketType === opt.value ? theme.winnerText : theme.text,
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Bracket Style Toggle */}
+      <div className="mb-5">
+        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
+          Bracket Style
+        </label>
+        <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+          {[
+            { value: 'boxed', label: 'Boxed' },
+            { value: 'line', label: 'Line' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setBracketStyle(opt.value)}
+              className="flex-1 py-2 px-3 text-sm font-medium transition-all cursor-pointer"
+              style={{
+                background: bracketStyle === opt.value ? theme.accent : theme.cardBg,
+                color: bracketStyle === opt.value ? theme.winnerText : theme.text,
               }}
             >
               {opt.label}
