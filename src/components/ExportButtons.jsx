@@ -110,10 +110,11 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
     const pageAspect = (PAGE_W - printMargin * 2) / (PAGE_H - printMargin * 2);
     const contentAspect = w / h;
 
+    const restoreFns = [];
+
     if (contentAspect >= pageAspect) {
       // Bracket is wider than page ratio (too short) → increase height via minHeight
       const targetH = Math.round(w / pageAspect);
-      const restoreFns = [];
       el.querySelectorAll('[style]').forEach(container => {
         if (container.style.minHeight && container.style.minHeight !== '') {
           const orig = container.style.minHeight;
@@ -121,11 +122,37 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
           container.style.minHeight = `${targetH}px`;
         }
       });
-      return restoreFns.length ? () => restoreFns.forEach(fn => fn()) : null;
+    } else {
+      // Bracket is taller than page ratio (too narrow) → add column-gap to widen
+      const targetW = Math.round(h * pageAspect);
+      const extraW = targetW - w;
+      if (extraW > 0) {
+        // Add gap to the bracket flex container (has inline minHeight) and its
+        // direct child flex rows (winners/losers sub-containers).
+        el.querySelectorAll('[style]').forEach(container => {
+          if (container.style.minHeight && container.style.minHeight !== '') {
+            // Outer flex container — add gap between main sections
+            const outerChildren = [...container.children].filter(c => c.style.position !== 'absolute');
+            const outerGaps = Math.max(outerChildren.length - 1, 1);
+            const gapPx = Math.round(extraW / outerGaps);
+            const origGap = container.style.columnGap || '';
+            restoreFns.push(() => { container.style.columnGap = origGap; });
+            container.style.columnGap = `${gapPx}px`;
+
+            // Also add gap to inner flex-row children (e.g., winners/losers round rows)
+            outerChildren.forEach(child => {
+              if (child.children.length > 1 && getComputedStyle(child).display === 'flex') {
+                const origChildGap = child.style.columnGap || '';
+                restoreFns.push(() => { child.style.columnGap = origChildGap; });
+                child.style.columnGap = `${gapPx}px`;
+              }
+            });
+          }
+        });
+      }
     }
 
-    // Bracket is taller than page ratio — sizing constants handle this at render time.
-    return null;
+    return restoreFns.length ? () => restoreFns.forEach(fn => fn()) : null;
   };
 
   const handlePNG = async () => {
