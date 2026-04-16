@@ -123,8 +123,10 @@ function ChampionDisplay({ rounds, theme, showSeeds }) {
   );
 }
 
-// Target aspect ratio for A4 landscape with ~1" margins: (297-50.8)/(210-50.8) ≈ 1.55
-const PAGE_ASPECT = 1.5;
+// Slightly wider than A4 landscape usable area (~1.55) so brackets are always
+// width-limited during export. This fills the full horizontal space, trading
+// a small bottom gap instead of noticeable side gaps.
+const PAGE_ASPECT = 1.65;
 
 function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
   const containerRef = useRef(null);
