@@ -21,13 +21,13 @@ function computeBracketSizing(firstRoundMatchCount, layout, bracketType) {
     if (firstRoundMatchCount <= 16) return { cardW: 160, padY: 9, baseGap: 10, roundW: 190 };
     return { cardW: 140, padY: 8, baseGap: 6, roundW: 165 };
   }
-  // Standard SE (one-sided) — generous padY for small brackets so they fill the
-  // full landscape page height (like print brackets with tall write-in slots).
+  // Standard SE (one-sided) — wide roundW so the bracket fills landscape pages.
+  // Tall brackets with narrow roundW create too much horizontal white space in PDF.
   if (firstRoundMatchCount <= 2) return { cardW: 300, padY: 55, baseGap: 100, roundW: 420 };
-  if (firstRoundMatchCount <= 4) return { cardW: 280, padY: 42, baseGap: 72, roundW: 340 };
-  if (firstRoundMatchCount <= 8) return { cardW: 220, padY: 12, baseGap: 32, roundW: 260 };
-  if (firstRoundMatchCount <= 16) return { cardW: 200, padY: 10, baseGap: 16, roundW: 240 };
-  return { cardW: 200, padY: 5, baseGap: 8, roundW: 270 };
+  if (firstRoundMatchCount <= 4) return { cardW: 280, padY: 42, baseGap: 72, roundW: 380 };
+  if (firstRoundMatchCount <= 8) return { cardW: 220, padY: 12, baseGap: 32, roundW: 340 };
+  if (firstRoundMatchCount <= 16) return { cardW: 200, padY: 10, baseGap: 16, roundW: 300 };
+  return { cardW: 200, padY: 5, baseGap: 8, roundW: 300 };
 }
 
 function AutoScaleWrapper({ children, enabled }) {

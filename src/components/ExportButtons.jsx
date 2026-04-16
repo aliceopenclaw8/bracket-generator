@@ -159,7 +159,10 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       const imgW = canvas.width * ratio;
       const imgH = canvas.height * ratio;
       const x = (PAGE_W - imgW) / 2;
-      const y = margin; // top-align — centering wastes space on wide-but-short brackets
+      // Wide brackets (width-limited): top-align so vertical space isn't wasted.
+      // Tall brackets (height-limited): vertically center to balance white space.
+      const widthLimited = (maxW / canvas.width) < (maxH / canvas.height);
+      const y = widthLimited ? margin : margin + (maxH - imgH) / 2;
       pdf.addImage(imgData, 'PNG', x, y, imgW, imgH);
       pdf.save(`${title.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
