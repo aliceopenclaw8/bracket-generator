@@ -462,11 +462,13 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
 
   return (
     <div
-      className="bracket-container rounded-2xl overflow-hidden"
+      className="bracket-container rounded-2xl overflow-hidden mx-auto"
       style={{
         background: theme.bg,
         border: `1px solid ${theme.cardBorder}`,
         aspectRatio: '297 / 210', // A4 landscape — preview = print preview
+        height: 'calc(100vh - 160px)', // fit in one screen (header + toolbar ~160px)
+        maxWidth: '100%', // shrink width on narrow screens while keeping ratio
       }}
     >
       {/* Bracket Header */}
