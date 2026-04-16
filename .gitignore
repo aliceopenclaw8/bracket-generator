@@ -25,3 +25,6 @@ dist-ssr
 
 # Claude Code remember plugin session memory (local only)
 .remember/
+
+# Verification review output
+review/
