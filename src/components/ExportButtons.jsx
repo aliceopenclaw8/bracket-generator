@@ -99,8 +99,14 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
     const el = bracketRef.current;
     if (!el) return null;
 
-    const w = el.scrollWidth;
-    const h = el.scrollHeight;
+    // Measure the scaledEl (has width: max-content → concrete width), NOT bracketRef
+    // which uses fit-content and can collapse due to CSS circular dependency.
+    const scaledEl = el.querySelector('[data-auto-scale]');
+    const measureEl = scaledEl || el;
+    const w = measureEl.scrollWidth;
+    const h = measureEl.scrollHeight;
+    if (w <= 0 || h <= 0) return null;
+
     const pageAspect = (PAGE_W - printMargin * 2) / (PAGE_H - printMargin * 2);
     const contentAspect = w / h;
 
@@ -119,7 +125,6 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
     }
 
     // Bracket is taller than page ratio — sizing constants handle this at render time.
-    // Can't shrink content with minHeight, so accept proportional scaling.
     return null;
   };
 
