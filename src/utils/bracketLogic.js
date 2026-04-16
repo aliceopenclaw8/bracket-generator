@@ -108,7 +108,7 @@ export function generateDoubleElimination(participants) {
   const { rounds: winnersRounds } = generateSingleElimination(participants);
   const totalWinnerRounds = winnersRounds.length;
 
-  // Losers bracket has roughly 2 * (totalWinnerRounds - 1) - 1 rounds
+  // Losers bracket has 2 * (totalWinnerRounds - 1) rounds
   // Each winner round (except first) drops losers into losers bracket
   const losersRounds = [];
   const numFirstRoundMatches = winnersRounds[0].length;
@@ -138,8 +138,8 @@ export function generateDoubleElimination(participants) {
   let winnersRoundIdx = 2; // Start feeding from winners round 2
 
   let losersRoundIdx = 1;
-  while (currentLosersMatchCount > 1 || losersRoundIdx < (totalWinnerRounds - 1) * 2 - 1) {
-    if (losersRoundIdx % 2 === 1 && winnersRoundIdx < totalWinnerRounds) {
+  while (currentLosersMatchCount > 1 || losersRoundIdx < (totalWinnerRounds - 1) * 2) {
+    if (losersRoundIdx % 2 === 1 && winnersRoundIdx <= totalWinnerRounds) {
       // Merge round: winners from prev losers round vs dropdowns from winners
       const mergeRound = [];
       for (let i = 0; i < currentLosersMatchCount; i++) {
