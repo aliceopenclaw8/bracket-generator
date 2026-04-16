@@ -83,10 +83,6 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
         }
       }
 
-      // minHeight is left as-is — the bracket components (DoubleSidedBracket,
-      // SingleBracket, DoubleBracket) set their own minHeight to achieve the right
-      // aspect ratio for the page. Manipulating it here caused connector misalignment.
-
       if (restoreFns.length === 0) return null;
       return runRestores;
     } catch (e) {
@@ -97,13 +93,50 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
     }
   };
 
+  // After prepareCapture + connector wait, measure REAL dimensions and adjust
+  // minHeight so the bracket fills the A4 page. Returns a restore function.
+  const adjustForPageFill = () => {
+    const el = bracketRef.current;
+    if (!el) return null;
+
+    const w = el.scrollWidth;
+    const h = el.scrollHeight;
+    const pageAspect = (PAGE_W - printMargin * 2) / (PAGE_H - printMargin * 2);
+    const contentAspect = w / h;
+
+    if (contentAspect >= pageAspect) {
+      // Bracket is wider than page ratio (too short) → increase height via minHeight
+      const targetH = Math.round(w / pageAspect);
+      const restoreFns = [];
+      el.querySelectorAll('[style]').forEach(container => {
+        if (container.style.minHeight && container.style.minHeight !== '') {
+          const orig = container.style.minHeight;
+          restoreFns.push(() => { container.style.minHeight = orig; });
+          container.style.minHeight = `${targetH}px`;
+        }
+      });
+      return restoreFns.length ? () => restoreFns.forEach(fn => fn()) : null;
+    }
+
+    // Bracket is taller than page ratio — sizing constants handle this at render time.
+    // Can't shrink content with minHeight, so accept proportional scaling.
+    return null;
+  };
+
   const handlePNG = async () => {
     if (!bracketRef.current) return;
     let restore = null;
+    let restoreFill = null;
     try {
       restore = prepareCapture();
-      // Wait for BracketConnectors to recalculate line positions after layout changes
+      // Wait for BracketConnectors to recalculate after layout changes
       await new Promise(r => setTimeout(r, 200));
+      // Measure real dimensions and adjust minHeight for page fill
+      restoreFill = adjustForPageFill();
+      if (restoreFill) {
+        // Wait again for connectors to recalculate after minHeight change
+        await new Promise(r => setTimeout(r, 200));
+      }
       const canvas = await html2canvas(bracketRef.current, {
         backgroundColor: theme.bg,
         scale: 3,
@@ -141,6 +174,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       console.error('PNG export failed:', err);
       alert(`Failed to export as PNG: ${err.message || 'Unknown error'}. Please try again.`);
     } finally {
+      if (restoreFill) restoreFill();
       if (restore) restore();
     }
   };
@@ -148,12 +182,18 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
   const handlePDF = async () => {
     if (!bracketRef.current) return;
     let restore = null;
+    let restoreFill = null;
     try {
       restore = prepareCapture();
-      // Wait for BracketConnectors to recalculate line positions after layout changes
+      // Wait for BracketConnectors to recalculate after layout changes
       await new Promise(r => setTimeout(r, 200));
+      // Measure real dimensions and adjust minHeight for page fill
+      restoreFill = adjustForPageFill();
+      if (restoreFill) {
+        await new Promise(r => setTimeout(r, 200));
+      }
 
-      // Estimate legibility AFTER prepareCapture so we measure the actual capture state
+      // Estimate legibility AFTER adjustments so we measure the actual capture state
       const usableW = PAGE_W - printMargin * 2;
       if (usableW > 0) {
         const previewEl = bracketRef.current.querySelector('[data-auto-scale]') || bracketRef.current;
@@ -197,6 +237,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       console.error('PDF export failed:', err);
       alert(`Failed to export as PDF: ${err.message || 'Unknown error'}. Please try again.`);
     } finally {
+      if (restoreFill) restoreFill();
       if (restore) restore();
     }
   };

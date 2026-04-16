@@ -122,17 +122,11 @@ function ChampionDisplay({ rounds, theme, showSeeds }) {
   );
 }
 
-// Slightly wider than A4 landscape usable area (~1.55) so brackets are always
-// width-limited during export. This fills the full horizontal space, trading
-// a small bottom gap instead of noticeable side gaps.
-const PAGE_ASPECT = 1.65;
-
 function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
   const containerRef = useRef(null);
-  // Compute minHeight from estimated width so the bracket fills A4 landscape.
-  const numRounds = bracket.rounds.length;
-  const estWidth = numRounds * sizing.roundW + 200; // +200 for champion column
-  const minH = Math.max(450, Math.round(estWidth / PAGE_ASPECT));
+  // Simple on-screen minHeight — export adjusts this dynamically for page fill.
+  const firstRoundCount = (bracket.rounds[0] || []).length;
+  const minH = Math.max(450, firstRoundCount * 90);
 
   return (
     <div className="relative" ref={containerRef}>
@@ -263,12 +257,9 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
   const eastRef = useRef(null);
   const outerRef = useRef(null);
 
-  // Compute minHeight from estimated width so the bracket fills A4 landscape.
-  // DS has west + finals + east, each with (numRounds - 1) round columns.
-  const numRounds = bracket.rounds.length;
-  const westRounds = numRounds - 1;
-  const estWidth = westRounds * 2 * sizing.roundW + sizing.roundW; // west + east + finals
-  const dsMinHeight = Math.max(500, Math.round(estWidth / PAGE_ASPECT));
+  // Simple on-screen minHeight — export adjusts this dynamically for page fill.
+  const totalMatches = (bracket.rounds[0] || []).length;
+  const dsMinHeight = Math.max(500, totalMatches * 2 * 25);
 
   return (
     <div className="relative flex items-stretch gap-0" style={{ padding: '20px 0', minHeight: `${dsMinHeight}px` }} ref={outerRef}>
@@ -362,12 +353,9 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, sizing, showSeed
     roundW: Math.max(168, Math.round(sizing.roundW * 0.7)),
   };
 
-  // Compute minHeight from estimated width so the bracket fills A4 landscape.
-  // DE has winners + GF + losers side by side.
-  const numWRounds = doubleBracket.winnersRounds.length;
-  const numLRounds = doubleBracket.losersRounds.length;
-  const estWidth = numWRounds * sizing.roundW + sizing.roundW + numLRounds * losersSizing.roundW;
-  const minH = Math.max(600, Math.round(estWidth / PAGE_ASPECT));
+  // Simple on-screen minHeight — export adjusts this dynamically for page fill.
+  const winnersR1Count = (doubleBracket.winnersRounds[0] || []).length;
+  const minH = Math.max(600, winnersR1Count * 2 * 35);
 
   return (
     <div>
