@@ -46,6 +46,14 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       });
       if (r4) restoreFns.push(r4);
 
+      // Update data-auto-scale to 1 so BracketConnectors compute positions at
+      // true scale (they divide by this value — a stale 0.5 would double offsets).
+      if (scaledEl) {
+        const origScale = scaledEl.dataset.autoScale;
+        restoreFns.push(() => { scaledEl.dataset.autoScale = origScale; });
+        scaledEl.dataset.autoScale = '1';
+      }
+
       // Hide bracket header to avoid bloating canvas dimensions
       const r5 = overrideStyles(headerEl, { display: 'none' });
       if (r5) restoreFns.push(r5);
@@ -98,6 +106,8 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
     let restore = null;
     try {
       restore = prepareCapture();
+      // Wait for BracketConnectors to recalculate line positions after layout changes
+      await new Promise(r => setTimeout(r, 200));
       const canvas = await html2canvas(bracketRef.current, {
         backgroundColor: theme.bg,
         scale: 3,
@@ -124,6 +134,8 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
     let restore = null;
     try {
       restore = prepareCapture();
+      // Wait for BracketConnectors to recalculate line positions after layout changes
+      await new Promise(r => setTimeout(r, 200));
 
       // Estimate legibility AFTER prepareCapture so we measure the actual capture state
       const usableW = PAGE_W - printMargin * 2;
