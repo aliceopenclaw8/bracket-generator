@@ -1,9 +1,12 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
-// US Letter landscape dimensions in inches
-const PAGE_W = 11;
-const PAGE_H = 8.5;
+// A4 landscape dimensions in inches (297mm × 210mm)
+const PAGE_W = 11.693;
+const PAGE_H = 8.268;
+// A4 at 300 DPI for print-ready PNG
+const A4_PX_W = 3508;
+const A4_PX_H = 2480;
 
 export default function ExportButtons({ bracketRef, title, theme, printMargin = 1 }) {
   // Helper: override inline styles and return a restore function.
@@ -110,9 +113,29 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       if (canvas.width === 0 || canvas.height === 0) {
         throw new Error('html2canvas returned empty canvas — likely memory exhaustion');
       }
+      // Place bracket on an A4-sized canvas (300 DPI) with margins
+      const margin = printMargin;
+      const dpi = 300;
+      const marginPx = Math.round(margin * dpi);
+      const maxW = A4_PX_W - marginPx * 2;
+      const maxH = A4_PX_H - marginPx * 2;
+      const ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
+      const imgW = Math.round(canvas.width * ratio);
+      const imgH = Math.round(canvas.height * ratio);
+      const a4 = document.createElement('canvas');
+      a4.width = A4_PX_W;
+      a4.height = A4_PX_H;
+      const ctx = a4.getContext('2d');
+      ctx.fillStyle = theme.bg;
+      ctx.fillRect(0, 0, A4_PX_W, A4_PX_H);
+      const x = Math.round((A4_PX_W - imgW) / 2);
+      const widthLimited = (maxW / canvas.width) < (maxH / canvas.height);
+      const y = widthLimited ? marginPx : Math.round(marginPx + (maxH - imgH) / 2);
+      ctx.drawImage(canvas, x, y, imgW, imgH);
+
       const link = document.createElement('a');
       link.download = `${title.replace(/\s+/g, '_')}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = a4.toDataURL('image/png');
       link.click();
     } catch (err) {
       console.error('PNG export failed:', err);
@@ -156,7 +179,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
         throw new Error('html2canvas returned empty canvas — likely memory exhaustion');
       }
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'in', format: 'letter' });
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'in', format: 'a4' });
       const margin = printMargin;
       const maxW = PAGE_W - margin * 2;
       const maxH = PAGE_H - margin * 2;
