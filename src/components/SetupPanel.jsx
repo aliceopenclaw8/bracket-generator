@@ -16,6 +16,8 @@ export default function SetupPanel({
   setLayout,
   bracketStyle,
   setBracketStyle,
+  participantsMode,
+  setParticipantsMode,
   onGenerate,
   theme,
   themeName,
@@ -96,74 +98,23 @@ export default function SetupPanel({
         </p>
       </div>
 
-      {/* Bracket Type Toggle */}
-      <div className="mb-5">
-        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
-          Bracket Type
-        </label>
-        <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
-          {[
-            { value: 'single', label: 'Single Elimination' },
-            { value: 'double', label: 'Double Elimination' },
-          ].map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setBracketType(opt.value)}
-              className="flex-1 py-2 px-3 text-sm font-medium transition-all cursor-pointer"
-              style={{
-                background: bracketType === opt.value ? theme.accent : theme.cardBg,
-                color: bracketType === opt.value ? theme.winnerText : theme.text,
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Bracket Style Toggle */}
-      <div className="mb-5">
-        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
-          Bracket Style
-        </label>
-        <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
-          {[
-            { value: 'boxed', label: 'Boxed' },
-            { value: 'line', label: 'Line' },
-          ].map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setBracketStyle(opt.value)}
-              className="flex-1 py-2 px-3 text-sm font-medium transition-all cursor-pointer"
-              style={{
-                background: bracketStyle === opt.value ? theme.accent : theme.cardBg,
-                color: bracketStyle === opt.value ? theme.winnerText : theme.text,
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Layout Toggle */}
-      {bracketType === 'single' && participantNames.length >= 8 && (
-        <div className="mb-5">
-          <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
-            Layout
-          </label>
-          <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+      {/* Compact Options Row */}
+      <div className="flex flex-wrap items-end gap-3 mb-6">
+        {/* Bracket Type */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium" style={{ color: theme.textMuted }}>Type</span>
+          <div className="flex rounded-md overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
             {[
-              { value: 'standard', label: 'Standard (Left to Right)' },
-              { value: 'double-sided', label: 'Double-Sided' },
+              { value: 'single', label: 'Single Elim' },
+              { value: 'double', label: 'Double Elim' },
             ].map(opt => (
               <button
                 key={opt.value}
-                onClick={() => setLayout(opt.value)}
-                className="flex-1 py-2 px-3 text-sm font-medium transition-all cursor-pointer"
+                onClick={() => setBracketType(opt.value)}
+                className="px-2 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap"
                 style={{
-                  background: layout === opt.value ? theme.accent : theme.cardBg,
-                  color: layout === opt.value ? theme.winnerText : theme.text,
+                  background: bracketType === opt.value ? theme.accent : theme.cardBg,
+                  color: bracketType === opt.value ? theme.winnerText : theme.text,
                 }}
               >
                 {opt.label}
@@ -171,64 +122,106 @@ export default function SetupPanel({
             ))}
           </div>
         </div>
-      )}
 
-      {/* Seeded / Unseeded Toggle */}
-      <div className="mb-5">
-        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
-          Seed Display
-        </label>
-        <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
-          {[
-            { value: true, label: 'Seeded' },
-            { value: false, label: 'Unseeded' },
-          ].map(opt => (
-            <button
-              key={String(opt.value)}
-              onClick={() => setShowSeeds(opt.value)}
-              className="flex-1 py-2 px-3 text-sm font-medium transition-all cursor-pointer"
-              style={{
-                background: showSeeds === opt.value ? theme.accent : theme.cardBg,
-                color: showSeeds === opt.value ? theme.winnerText : theme.text,
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
+        {/* Bracket Style */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium" style={{ color: theme.textMuted }}>Style</span>
+          <div className="flex rounded-md overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+            {[
+              { value: 'boxed', label: 'Boxed' },
+              { value: 'line', label: 'Line' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setBracketStyle(opt.value)}
+                className="px-2 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap"
+                style={{
+                  background: bracketStyle === opt.value ? theme.accent : theme.cardBg,
+                  color: bracketStyle === opt.value ? theme.winnerText : theme.text,
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Print Margin */}
-      <div className="mb-5">
-        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
-          Print Margin
-        </label>
-        <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
-          {[
-            { value: 0.5, label: '0.5 inch' },
-            { value: 1, label: '1 inch' },
-          ].map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setPrintMargin(opt.value)}
-              className="flex-1 py-2 px-3 text-sm font-medium transition-all cursor-pointer"
-              style={{
-                background: printMargin === opt.value ? theme.accent : theme.cardBg,
-                color: printMargin === opt.value ? theme.winnerText : theme.text,
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
+        {/* Layout (SE only, >= 8 teams) */}
+        {bracketType === 'single' && participantNames.length >= 8 && (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium" style={{ color: theme.textMuted }}>Layout</span>
+            <div className="flex rounded-md overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+              {[
+                { value: 'standard', label: 'Standard' },
+                { value: 'double-sided', label: 'Double-Sided' },
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setLayout(opt.value)}
+                  className="px-2 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap"
+                  style={{
+                    background: layout === opt.value ? theme.accent : theme.cardBg,
+                    color: layout === opt.value ? theme.winnerText : theme.text,
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Seed Display */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium" style={{ color: theme.textMuted }}>Seeds</span>
+          <div className="flex rounded-md overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+            {[
+              { value: true, label: 'Seeded' },
+              { value: false, label: 'Unseeded' },
+            ].map(opt => (
+              <button
+                key={String(opt.value)}
+                onClick={() => setShowSeeds(opt.value)}
+                className="px-2 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap"
+                style={{
+                  background: showSeeds === opt.value ? theme.accent : theme.cardBg,
+                  color: showSeeds === opt.value ? theme.winnerText : theme.text,
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Theme Picker */}
-      <div className="mb-5">
-        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
-          Color Theme
-        </label>
-        <ThemePicker themeName={themeName} setThemeName={setThemeName} currentTheme={theme} />
+        {/* Print Margin */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium" style={{ color: theme.textMuted }}>Margin</span>
+          <div className="flex rounded-md overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+            {[
+              { value: 0.5, label: '0.5 in' },
+              { value: 1, label: '1 in' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setPrintMargin(opt.value)}
+                className="px-2 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap"
+                style={{
+                  background: printMargin === opt.value ? theme.accent : theme.cardBg,
+                  color: printMargin === opt.value ? theme.winnerText : theme.text,
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Theme */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium" style={{ color: theme.textMuted }}>Theme</span>
+          <ThemePicker themeName={themeName} setThemeName={setThemeName} currentTheme={theme} />
+        </div>
       </div>
 
       {/* Presets */}
@@ -285,123 +278,156 @@ export default function SetupPanel({
         )}
       </div>
 
-      {/* Participants List */}
+      {/* Participants Section */}
       <div className="mb-5">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-3">
           <label className="text-sm font-medium" style={{ color: theme.textMuted }}>
-            Participants ({validCount})
+            Participants ({participantNames.length})
           </label>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleRandomize}
-              className="text-xs px-3 py-1 rounded-full font-medium transition-all hover:scale-105 cursor-pointer"
-              style={{
-                background: theme.accent + '15',
-                color: theme.accent,
-                border: `1px solid ${theme.accent}44`,
-              }}
-            >
-              Randomize
-            </button>
-            <span className="text-xs" style={{ color: theme.textMuted }}>
-              Drag to reorder seeds
-            </span>
+          {/* Blank / Add Teams Toggle */}
+          <div className="flex rounded-md overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+            {[
+              { value: 'blank', label: 'Blank' },
+              { value: 'add-teams', label: 'Add Teams' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setParticipantsMode(opt.value)}
+                className="px-3 py-1 text-xs font-medium transition-all cursor-pointer whitespace-nowrap"
+                style={{
+                  background: participantsMode === opt.value ? theme.accent : theme.cardBg,
+                  color: participantsMode === opt.value ? theme.winnerText : theme.text,
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="participants">
-            {(provided) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className="space-y-2"
-              >
-                {participantNames.map((name, index) => (
-                  <Draggable key={`p-${index}`} draggableId={`p-${index}`} index={index}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className="flex items-center gap-2 rounded-lg p-1 transition-shadow"
-                        style={{
-                          ...provided.draggableProps.style,
-                          background: snapshot.isDragging ? theme.accent + '22' : theme.cardBg,
-                          border: `1px solid ${snapshot.isDragging ? theme.accent : theme.cardBorder}`,
-                        }}
-                      >
-                        <div
-                          {...provided.dragHandleProps}
-                          className="flex items-center justify-center w-8 h-8 rounded cursor-grab shrink-0"
-                          style={{ color: theme.textMuted }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                            <circle cx="9" cy="6" r="1.5" />
-                            <circle cx="15" cy="6" r="1.5" />
-                            <circle cx="9" cy="12" r="1.5" />
-                            <circle cx="15" cy="12" r="1.5" />
-                            <circle cx="9" cy="18" r="1.5" />
-                            <circle cx="15" cy="18" r="1.5" />
-                          </svg>
-                        </div>
-                        <span
-                          className="text-xs font-mono w-6 text-center shrink-0"
-                          style={{ color: theme.accent }}
-                        >
-                          {index + 1}
-                        </span>
-                        <input
-                          value={name}
-                          onChange={(e) => handleNameChange(index, e.target.value)}
-                          placeholder={`Team ${index + 1}`}
-                          className="flex-1 bg-transparent outline-none text-sm py-2 px-2"
-                          style={{ color: theme.text }}
-                        />
-                        <button
-                          onClick={() => removeParticipant(index)}
-                          className="w-8 h-8 flex items-center justify-center rounded hover:opacity-100 opacity-40 transition-opacity shrink-0 cursor-pointer"
-                          style={{ color: theme.text }}
-                          disabled={participantNames.length <= 2}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+        {participantsMode === 'blank' && (
+          <p className="text-sm mb-3" style={{ color: theme.textMuted }}>
+            Blank bracket &mdash; {participantNames.length} empty slots
+          </p>
+        )}
 
-        <button
-          onClick={addParticipant}
-          className="w-full mt-2 py-2 rounded-lg text-sm font-medium transition-all hover:scale-[1.01] cursor-pointer"
-          style={{
-            background: theme.cardBg,
-            border: `1px dashed ${theme.cardBorder}`,
-            color: theme.textMuted,
-          }}
-        >
-          + Add Participant
-        </button>
+        {participantsMode === 'add-teams' && (
+          <>
+            <div className="flex items-center justify-end mb-2 gap-3">
+              <button
+                onClick={handleRandomize}
+                className="text-xs px-3 py-1 rounded-full font-medium transition-all hover:scale-105 cursor-pointer"
+                style={{
+                  background: theme.accent + '15',
+                  color: theme.accent,
+                  border: `1px solid ${theme.accent}44`,
+                }}
+              >
+                Randomize
+              </button>
+              <span className="text-xs" style={{ color: theme.textMuted }}>
+                Drag to reorder seeds
+              </span>
+            </div>
+
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="participants">
+                {(provided) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="space-y-2"
+                  >
+                    {participantNames.map((name, index) => (
+                      <Draggable key={`p-${index}`} draggableId={`p-${index}`} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className="flex items-center gap-2 rounded-lg p-1 transition-shadow"
+                            style={{
+                              ...provided.draggableProps.style,
+                              background: snapshot.isDragging ? theme.accent + '22' : theme.cardBg,
+                              border: `1px solid ${snapshot.isDragging ? theme.accent : theme.cardBorder}`,
+                            }}
+                          >
+                            <div
+                              {...provided.dragHandleProps}
+                              className="flex items-center justify-center w-8 h-8 rounded cursor-grab shrink-0"
+                              style={{ color: theme.textMuted }}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <circle cx="9" cy="6" r="1.5" />
+                                <circle cx="15" cy="6" r="1.5" />
+                                <circle cx="9" cy="12" r="1.5" />
+                                <circle cx="15" cy="12" r="1.5" />
+                                <circle cx="9" cy="18" r="1.5" />
+                                <circle cx="15" cy="18" r="1.5" />
+                              </svg>
+                            </div>
+                            <span
+                              className="text-xs font-mono w-6 text-center shrink-0"
+                              style={{ color: theme.accent }}
+                            >
+                              {index + 1}
+                            </span>
+                            <input
+                              value={name}
+                              onChange={(e) => handleNameChange(index, e.target.value)}
+                              placeholder={`Team ${index + 1}`}
+                              className="flex-1 bg-transparent outline-none text-sm py-2 px-2"
+                              style={{ color: theme.text }}
+                            />
+                            <button
+                              onClick={() => removeParticipant(index)}
+                              className="w-8 h-8 flex items-center justify-center rounded hover:opacity-100 opacity-40 transition-opacity shrink-0 cursor-pointer"
+                              style={{ color: theme.text }}
+                              disabled={participantNames.length <= 2}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+
+            <button
+              onClick={addParticipant}
+              className="w-full mt-2 py-2 rounded-lg text-sm font-medium transition-all hover:scale-[1.01] cursor-pointer"
+              style={{
+                background: theme.cardBg,
+                border: `1px dashed ${theme.cardBorder}`,
+                color: theme.textMuted,
+              }}
+            >
+              + Add Participant
+            </button>
+          </>
+        )}
       </div>
 
       {/* Generate Button */}
       <button
         onClick={onGenerate}
-        disabled={validCount < 2}
+        disabled={participantsMode === 'add-teams' ? validCount < 2 : participantNames.length < 2}
         className="w-full py-3 rounded-xl text-lg font-bold transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         style={{
           background: theme.accent,
           color: theme.winnerText,
         }}
       >
-        Generate Bracket ({validCount} participants)
+        {participantsMode === 'blank'
+          ? `Generate Blank Bracket (${participantNames.length} slots)`
+          : `Generate Bracket (${validCount} participants)`
+        }
       </button>
     </div>
   );

@@ -25,6 +25,7 @@ export default function App() {
   const [printMargin, setPrintMargin] = useState(1);
   const [layout, setLayout] = useState('standard');
   const [bracketStyle, setBracketStyle] = useState('boxed');
+  const [participantsMode, setParticipantsMode] = useState('add-teams');
   const [participantNames, setParticipantNames] = useState(DEFAULT_PARTICIPANTS);
   const [bracket, setBracket] = useState(null);
   const [doubleBracket, setDoubleBracket] = useState(null);
@@ -34,9 +35,15 @@ export default function App() {
   const theme = THEMES[themeName];
 
   const handleGenerate = useCallback(() => {
-    const participants = createParticipants(participantNames.filter(n => n.trim()));
-
-    if (participants.length < 2) return;
+    let participants;
+    if (participantsMode === 'blank') {
+      if (participantNames.length < 2) return;
+      // Blank mode: generate bracket slots with empty names
+      participants = participantNames.map((_, i) => ({ id: `p-${i}`, name: '', seed: i + 1 }));
+    } else {
+      participants = createParticipants(participantNames.filter(n => n.trim()));
+      if (participants.length < 2) return;
+    }
 
     if (bracketType === 'single') {
       const result = generateSingleElimination(participants);
@@ -48,7 +55,7 @@ export default function App() {
       setBracket(null);
     }
     setIsGenerated(true);
-  }, [participantNames, bracketType]);
+  }, [participantNames, bracketType, participantsMode]);
 
   const handleAdvanceWinner = useCallback((matchId, team, bracketSection) => {
     if (bracketType === 'single' && bracket) {
@@ -100,6 +107,8 @@ export default function App() {
             setLayout={setLayout}
             bracketStyle={bracketStyle}
             setBracketStyle={setBracketStyle}
+            participantsMode={participantsMode}
+            setParticipantsMode={setParticipantsMode}
             onGenerate={handleGenerate}
             theme={theme}
             themeName={themeName}
