@@ -8,26 +8,25 @@ import { splitBracketForDoubleSided } from '../utils/bracketLogic';
 function computeBracketSizing(firstRoundMatchCount, layout, bracketType) {
   // Compact padY is OK since overflow-hidden was removed from cards. The +8 paddingBottom
   // in TeamSlot and SVG SeedBadge baseline positioning handle descender rendering.
+  // >16 tiers use wide roundW and tight padY so large brackets (64-team) fill
+  // A4 landscape. Without this, 32+ stacked match cards make the bracket too tall.
   if (layout === 'double-sided') {
     if (firstRoundMatchCount <= 4) return { cardW: 200, padY: 14, baseGap: 48, roundW: 240 };
     if (firstRoundMatchCount <= 8) return { cardW: 170, padY: 10, baseGap: 12, roundW: 200 };
     if (firstRoundMatchCount <= 16) return { cardW: 150, padY: 8, baseGap: 6, roundW: 180 };
-    return { cardW: 150, padY: 6, baseGap: 3, roundW: 175 };
+    return { cardW: 150, padY: 3, baseGap: 2, roundW: 240 };
   }
-  // DE renders side-by-side (winners | GF | losers) — compact sizing like DS.
   if (bracketType === 'double') {
     if (firstRoundMatchCount <= 4) return { cardW: 200, padY: 12, baseGap: 32, roundW: 240 };
     if (firstRoundMatchCount <= 8) return { cardW: 180, padY: 10, baseGap: 16, roundW: 210 };
     if (firstRoundMatchCount <= 16) return { cardW: 160, padY: 9, baseGap: 10, roundW: 190 };
-    return { cardW: 140, padY: 8, baseGap: 6, roundW: 165 };
+    return { cardW: 140, padY: 4, baseGap: 3, roundW: 220 };
   }
-  // Standard SE (one-sided) — wide roundW so the bracket fills landscape pages.
-  // Tall brackets with narrow roundW create too much horizontal white space in PDF.
   if (firstRoundMatchCount <= 2) return { cardW: 300, padY: 55, baseGap: 100, roundW: 420 };
   if (firstRoundMatchCount <= 4) return { cardW: 280, padY: 42, baseGap: 72, roundW: 380 };
   if (firstRoundMatchCount <= 8) return { cardW: 220, padY: 12, baseGap: 32, roundW: 340 };
   if (firstRoundMatchCount <= 16) return { cardW: 200, padY: 10, baseGap: 16, roundW: 300 };
-  return { cardW: 200, padY: 5, baseGap: 8, roundW: 300 };
+  return { cardW: 200, padY: 3, baseGap: 3, roundW: 400 };
 }
 
 function AutoScaleWrapper({ children, enabled }) {
