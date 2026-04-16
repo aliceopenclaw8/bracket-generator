@@ -80,14 +80,22 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
         }
       }
 
-      // Remove artificial minHeight from flex containers (causes tall captures
-      // that waste horizontal page space when PDF scales to fit height)
+      // Set minHeight on bracket flex containers to match the page aspect ratio.
+      // Wide brackets (like DS) need more height to fill the page; tall brackets
+      // (like 64-team DS) need less. This replaces the old "remove all minHeight"
+      // which made wide brackets collapse vertically.
+      const bracketContent = scaledEl || bracketRef.current;
+      void bracketContent.offsetWidth; // force reflow after transform removal
+      const contentW = bracketContent.scrollWidth;
+      const pageAspect = (PAGE_W - printMargin * 2) / (PAGE_H - printMargin * 2);
+      const targetH = Math.round(contentW / pageAspect);
+
       const minHeightEls = bracketRef.current.querySelectorAll('[style]');
       minHeightEls.forEach(el => {
         if (el.style.minHeight && el.style.minHeight !== '') {
           const orig = el.style.minHeight;
           restoreFns.push(() => { el.style.minHeight = orig; });
-          el.style.minHeight = 'auto';
+          el.style.minHeight = `${targetH}px`;
         }
       });
 
