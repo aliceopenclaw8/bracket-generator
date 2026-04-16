@@ -123,11 +123,15 @@ function ChampionDisplay({ rounds, theme, showSeeds }) {
   );
 }
 
+// Target aspect ratio for A4 landscape with ~1" margins: (297-50.8)/(210-50.8) ≈ 1.55
+const PAGE_ASPECT = 1.5;
+
 function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
   const containerRef = useRef(null);
-  // minHeight prevents tiny brackets on PDF — gives justify-around room to distribute matches
-  const firstRoundCount = (bracket.rounds[0] || []).length;
-  const minH = Math.max(450, firstRoundCount * 95);
+  // Compute minHeight from estimated width so the bracket fills A4 landscape.
+  const numRounds = bracket.rounds.length;
+  const estWidth = numRounds * sizing.roundW + 200; // +200 for champion column
+  const minH = Math.max(450, Math.round(estWidth / PAGE_ASPECT));
 
   return (
     <div className="relative" ref={containerRef}>
@@ -258,15 +262,12 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
   const eastRef = useRef(null);
   const outerRef = useRef(null);
 
-  // Double-sided needs an explicit minHeight so flex `justify-around` has vertical room
-  // to distribute matches. Without it the container collapses to the content height of
-  // the Finals column (a single card), making the West/East sides look cramped.
-  const totalMatches = (bracket.rounds[0] || []).length;
-  const approxParticipants = totalMatches * 2;
-  // Multiplier 42 yields aspect ratio close to landscape page (11:8.5 ≈ 1.3)
-  // for typical DS brackets. E.g. 18 teams → 36 participants × 42 = 1512px height
-  // with ~1800px width → 1.19 aspect (fills a landscape page well).
-  const dsMinHeight = Math.max(500, approxParticipants * 42);
+  // Compute minHeight from estimated width so the bracket fills A4 landscape.
+  // DS has west + finals + east, each with (numRounds - 1) round columns.
+  const numRounds = bracket.rounds.length;
+  const westRounds = numRounds - 1;
+  const estWidth = westRounds * 2 * sizing.roundW + sizing.roundW; // west + east + finals
+  const dsMinHeight = Math.max(500, Math.round(estWidth / PAGE_ASPECT));
 
   return (
     <div className="relative flex items-stretch gap-0" style={{ padding: '20px 0', minHeight: `${dsMinHeight}px` }} ref={outerRef}>
@@ -360,9 +361,12 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, sizing, showSeed
     roundW: Math.max(168, Math.round(sizing.roundW * 0.7)),
   };
 
-  // minHeight gives justify-around room to distribute matches vertically
-  const winnersR1Count = (doubleBracket.winnersRounds[0] || []).length;
-  const minH = Math.max(600, winnersR1Count * 2 * 35);
+  // Compute minHeight from estimated width so the bracket fills A4 landscape.
+  // DE has winners + GF + losers side by side.
+  const numWRounds = doubleBracket.winnersRounds.length;
+  const numLRounds = doubleBracket.losersRounds.length;
+  const estWidth = numWRounds * sizing.roundW + sizing.roundW + numLRounds * losersSizing.roundW;
+  const minH = Math.max(600, Math.round(estWidth / PAGE_ASPECT));
 
   return (
     <div>
