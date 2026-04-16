@@ -45,7 +45,7 @@ function AutoScaleWrapper({ children, enabled }) {
       const naturalW = content.scrollWidth;
       const naturalH = content.scrollHeight;
       const availW = wrapper.clientWidth;
-      const availH = Math.max(window.innerHeight - 280, 400);
+      const availH = wrapper.clientHeight || Math.max(window.innerHeight - 280, 400);
 
       if (naturalW <= 0 || naturalH <= 0) return;
 
@@ -466,6 +466,7 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
       style={{
         background: theme.bg,
         border: `1px solid ${theme.cardBorder}`,
+        aspectRatio: '297 / 210', // A4 landscape — preview = print preview
       }}
     >
       {/* Bracket Header */}
