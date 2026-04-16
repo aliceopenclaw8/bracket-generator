@@ -9,7 +9,6 @@ const A4_PX_W = 3508;
 const A4_PX_H = 2480;
 
 export default function ExportButtons({ bracketRef, title, theme, printMargin = 1 }) {
-  // Helper: override inline styles and return a restore function.
   const overrideStyles = (el, newStyles) => {
     if (!el) return null;
     const orig = {};
@@ -20,145 +19,41 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
     return () => { for (const k of Object.keys(orig)) el.style[k] = orig[k]; };
   };
 
+  // Minimal capture prep — ONLY strip cosmetic chrome.
+  // The bracket on screen already has the correct layout, connectors, and sizing.
+  // Changing transform/padding/minHeight during capture breaks everything.
   const prepareCapture = () => {
     const restoreFns = [];
     const runRestores = () => restoreFns.forEach(fn => {
-      try { fn(); } catch (e) { console.error('Failed to restore DOM state:', e); }
+      try { fn(); } catch (e) { console.error('restore failed:', e); }
     });
 
     try {
-      const scaledEl = bracketRef.current?.querySelector('[data-auto-scale]');
-      const overflowEl = bracketRef.current?.querySelector('.bracket-container');
+      const containerEl = bracketRef.current?.querySelector('.bracket-container');
       const headerEl = bracketRef.current?.querySelector('.bracket-export-header');
-      const refEl = bracketRef.current;
-      const parentEl = refEl?.parentElement;
 
-      // Shrink-wrap bracket container to eliminate whitespace in capture
-      const r1 = overrideStyles(overflowEl, { width: 'fit-content', overflow: 'visible' });
+      // Hide bracket header (title bar) — saves vertical space
+      const r1 = overrideStyles(headerEl, { display: 'none' });
       if (r1) restoreFns.push(r1);
 
-      // Remove width constraints so wide brackets aren't clipped
-      const r2 = overrideStyles(refEl, { width: 'fit-content' });
+      // Remove border and rounded corners — no outline in export
+      const r2 = overrideStyles(containerEl, { border: 'none', borderRadius: '0' });
       if (r2) restoreFns.push(r2);
-      const r3 = overrideStyles(parentEl, { maxWidth: 'none', width: 'fit-content' });
-      if (r3) restoreFns.push(r3);
-
-      // Remove auto-scale transform for true-size capture
-      const r4 = overrideStyles(scaledEl, {
-        transform: 'none', marginRight: '0px', marginBottom: '0px', opacity: '1',
-      });
-      if (r4) restoreFns.push(r4);
-
-      // Update data-auto-scale to 1 so BracketConnectors compute positions at
-      // true scale (they divide by this value — a stale 0.5 would double offsets).
-      if (scaledEl) {
-        const origScale = scaledEl.dataset.autoScale;
-        restoreFns.push(() => { scaledEl.dataset.autoScale = origScale; });
-        scaledEl.dataset.autoScale = '1';
-      }
-
-      // Hide bracket header to avoid bloating canvas dimensions
-      const r5 = overrideStyles(headerEl, { display: 'none' });
-      if (r5) restoreFns.push(r5);
-
-      // Remove bracket container visual chrome (border, rounded corners) for clean capture
-      const containerEl = bracketRef.current?.querySelector('.bracket-container');
-      const r6 = overrideStyles(containerEl, {
-        border: 'none',
-        borderRadius: '0',
-      });
-      if (r6) restoreFns.push(r6);
-
-      // Remove content area padding (the div with class p-6 inside bracket-container)
-      const contentAreaEl = containerEl?.querySelector('.p-6');
-      if (contentAreaEl) {
-        const r7 = overrideStyles(contentAreaEl, { padding: '8px' });
-        if (r7) restoreFns.push(r7);
-      } else {
-        // Fallback: try bracket-scroll class
-        const scrollEl = containerEl?.querySelector('.bracket-scroll');
-        if (scrollEl) {
-          const r7 = overrideStyles(scrollEl, { padding: '8px' });
-          if (r7) restoreFns.push(r7);
-        }
-      }
 
       if (restoreFns.length === 0) return null;
       return runRestores;
     } catch (e) {
-      // Roll back any mutations that succeeded before the throw
-      console.error('prepareCapture failed mid-mutation, rolling back:', e);
+      console.error('prepareCapture failed:', e);
       runRestores();
       throw e;
     }
   };
 
-  // After prepareCapture + connector wait, measure REAL dimensions and adjust
-  // minHeight so the bracket fills the A4 page. Returns a restore function.
-  const adjustForPageFill = () => {
-    const el = bracketRef.current;
-    if (!el) return null;
-
-    // Measure the scaledEl (has width: max-content → concrete width), NOT bracketRef
-    // which uses fit-content and can collapse due to CSS circular dependency.
-    const scaledEl = el.querySelector('[data-auto-scale]');
-    const measureEl = scaledEl || el;
-    const w = measureEl.scrollWidth;
-    const h = measureEl.scrollHeight;
-    if (w <= 0 || h <= 0) return null;
-
-    const pageAspect = (PAGE_W - printMargin * 2) / (PAGE_H - printMargin * 2);
-    const contentAspect = w / h;
-
-    const restoreFns = [];
-
-    if (contentAspect >= pageAspect) {
-      // Bracket is wider than page ratio (too short) → increase height via minHeight
-      const targetH = Math.round(w / pageAspect);
-      el.querySelectorAll('[style]').forEach(container => {
-        if (container.style.minHeight && container.style.minHeight !== '') {
-          const orig = container.style.minHeight;
-          restoreFns.push(() => { container.style.minHeight = orig; });
-          container.style.minHeight = `${targetH}px`;
-        }
-      });
-    } else {
-      // Bracket is taller than page ratio (too narrow) → add column-gap to widen.
-      // ONLY at the outer level (between winners/GF/losers or round columns).
-      // Adding gap to inner flex rows caused losers bracket (10 rounds × gap) to explode.
-      const targetW = Math.round(h * pageAspect);
-      const extraW = targetW - w;
-      if (extraW > 0) {
-        el.querySelectorAll('[style]').forEach(container => {
-          if (container.style.minHeight && container.style.minHeight !== '') {
-            const outerChildren = [...container.children].filter(c => c.style.position !== 'absolute');
-            const outerGaps = Math.max(outerChildren.length - 1, 1);
-            const gapPx = Math.round(extraW / outerGaps);
-            const origGap = container.style.columnGap || '';
-            restoreFns.push(() => { container.style.columnGap = origGap; });
-            container.style.columnGap = `${gapPx}px`;
-          }
-        });
-      }
-    }
-
-    return restoreFns.length ? () => restoreFns.forEach(fn => fn()) : null;
-  };
-
   const handlePNG = async () => {
     if (!bracketRef.current) return;
     let restore = null;
-    let restoreFill = null;
     try {
       restore = prepareCapture();
-      // Wait for BracketConnectors to recalculate after layout changes
-      await new Promise(r => setTimeout(r, 200));
-      // Measure real dimensions and adjust minHeight for page fill
-      restoreFill = adjustForPageFill();
-      if (restoreFill) {
-        // Wait again for connectors to recalculate after minHeight change
-        await new Promise(r => setTimeout(r, 200));
-      }
       const canvas = await html2canvas(bracketRef.current, {
         backgroundColor: theme.bg,
         scale: 3,
@@ -166,17 +61,16 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
         logging: false,
       });
       if (canvas.width === 0 || canvas.height === 0) {
-        throw new Error('html2canvas returned empty canvas — likely memory exhaustion');
+        throw new Error('html2canvas returned empty canvas');
       }
-      // Place bracket on an A4-sized canvas (300 DPI) with margins
-      const margin = printMargin;
-      const dpi = 300;
-      const marginPx = Math.round(margin * dpi);
+      // Place on A4 canvas at 300 DPI with margins
+      const marginPx = Math.round(printMargin * 300);
       const maxW = A4_PX_W - marginPx * 2;
       const maxH = A4_PX_H - marginPx * 2;
       const ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
       const imgW = Math.round(canvas.width * ratio);
       const imgH = Math.round(canvas.height * ratio);
+
       const a4 = document.createElement('canvas');
       a4.width = A4_PX_W;
       a4.height = A4_PX_H;
@@ -196,7 +90,6 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       console.error('PNG export failed:', err);
       alert(`Failed to export as PNG: ${err.message || 'Unknown error'}. Please try again.`);
     } finally {
-      if (restoreFill) restoreFill();
       if (restore) restore();
     }
   };
@@ -204,33 +97,8 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
   const handlePDF = async () => {
     if (!bracketRef.current) return;
     let restore = null;
-    let restoreFill = null;
     try {
       restore = prepareCapture();
-      // Wait for BracketConnectors to recalculate after layout changes
-      await new Promise(r => setTimeout(r, 200));
-      // Measure real dimensions and adjust minHeight for page fill
-      restoreFill = adjustForPageFill();
-      if (restoreFill) {
-        await new Promise(r => setTimeout(r, 200));
-      }
-
-      // Estimate legibility AFTER adjustments so we measure the actual capture state
-      const usableW = PAGE_W - printMargin * 2;
-      if (usableW > 0) {
-        const previewEl = bracketRef.current.querySelector('[data-auto-scale]') || bracketRef.current;
-        const naturalW = previewEl.scrollWidth;
-        if (naturalW > 0) {
-          const effectiveFontPt = (42 / (naturalW * 3)) * usableW * 72;
-          if (effectiveFontPt < 5) {
-            const ok = window.confirm(
-              'This bracket is very large and may be difficult to read when printed on a single page. Continue anyway?'
-            );
-            if (!ok) return;
-          }
-        }
-      }
-
       const canvas = await html2canvas(bracketRef.current, {
         backgroundColor: theme.bg,
         scale: 3,
@@ -238,7 +106,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
         logging: false,
       });
       if (canvas.width === 0 || canvas.height === 0) {
-        throw new Error('html2canvas returned empty canvas — likely memory exhaustion');
+        throw new Error('html2canvas returned empty canvas');
       }
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'in', format: 'a4' });
@@ -249,8 +117,6 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       const imgW = canvas.width * ratio;
       const imgH = canvas.height * ratio;
       const x = (PAGE_W - imgW) / 2;
-      // Wide brackets (width-limited): top-align so vertical space isn't wasted.
-      // Tall brackets (height-limited): vertically center to balance white space.
       const widthLimited = (maxW / canvas.width) < (maxH / canvas.height);
       const y = widthLimited ? margin : margin + (maxH - imgH) / 2;
       pdf.addImage(imgData, 'PNG', x, y, imgW, imgH);
@@ -259,7 +125,6 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       console.error('PDF export failed:', err);
       alert(`Failed to export as PDF: ${err.message || 'Unknown error'}. Please try again.`);
     } finally {
-      if (restoreFill) restoreFill();
       if (restore) restore();
     }
   };
