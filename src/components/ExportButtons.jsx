@@ -50,6 +50,39 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       const r5 = overrideStyles(headerEl, { display: 'none' });
       if (r5) restoreFns.push(r5);
 
+      // Remove bracket container visual chrome (border, rounded corners) for clean capture
+      const containerEl = bracketRef.current?.querySelector('.bracket-container');
+      const r6 = overrideStyles(containerEl, {
+        border: 'none',
+        borderRadius: '0',
+      });
+      if (r6) restoreFns.push(r6);
+
+      // Remove content area padding (the div with class p-6 inside bracket-container)
+      const contentAreaEl = containerEl?.querySelector('.p-6');
+      if (contentAreaEl) {
+        const r7 = overrideStyles(contentAreaEl, { padding: '8px' });
+        if (r7) restoreFns.push(r7);
+      } else {
+        // Fallback: try bracket-scroll class
+        const scrollEl = containerEl?.querySelector('.bracket-scroll');
+        if (scrollEl) {
+          const r7 = overrideStyles(scrollEl, { padding: '8px' });
+          if (r7) restoreFns.push(r7);
+        }
+      }
+
+      // Remove artificial minHeight from flex containers (causes tall captures
+      // that waste horizontal page space when PDF scales to fit height)
+      const minHeightEls = bracketRef.current.querySelectorAll('[style]');
+      minHeightEls.forEach(el => {
+        if (el.style.minHeight && el.style.minHeight !== '') {
+          const orig = el.style.minHeight;
+          restoreFns.push(() => { el.style.minHeight = orig; });
+          el.style.minHeight = 'auto';
+        }
+      });
+
       if (restoreFns.length === 0) return null;
       return runRestores;
     } catch (e) {

@@ -12,7 +12,7 @@ function computeBracketSizing(firstRoundMatchCount, layout, bracketType) {
     if (firstRoundMatchCount <= 4) return { cardW: 200, padY: 14, baseGap: 48, roundW: 240 };
     if (firstRoundMatchCount <= 8) return { cardW: 170, padY: 10, baseGap: 12, roundW: 200 };
     if (firstRoundMatchCount <= 16) return { cardW: 150, padY: 8, baseGap: 6, roundW: 180 };
-    return { cardW: 140, padY: 8, baseGap: 4, roundW: 165 };
+    return { cardW: 150, padY: 6, baseGap: 3, roundW: 175 };
   }
   // DE renders side-by-side (winners | GF | losers) — compact sizing like DS.
   if (bracketType === 'double') {
