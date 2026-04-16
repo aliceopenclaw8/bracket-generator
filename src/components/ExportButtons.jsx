@@ -80,24 +80,9 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
         }
       }
 
-      // Set minHeight on bracket flex containers to match the page aspect ratio.
-      // Wide brackets (like DS) need more height to fill the page; tall brackets
-      // (like 64-team DS) need less. This replaces the old "remove all minHeight"
-      // which made wide brackets collapse vertically.
-      const bracketContent = scaledEl || bracketRef.current;
-      void bracketContent.offsetWidth; // force reflow after transform removal
-      const contentW = bracketContent.scrollWidth;
-      const pageAspect = (PAGE_W - printMargin * 2) / (PAGE_H - printMargin * 2);
-      const targetH = Math.round(contentW / pageAspect);
-
-      const minHeightEls = bracketRef.current.querySelectorAll('[style]');
-      minHeightEls.forEach(el => {
-        if (el.style.minHeight && el.style.minHeight !== '') {
-          const orig = el.style.minHeight;
-          restoreFns.push(() => { el.style.minHeight = orig; });
-          el.style.minHeight = `${targetH}px`;
-        }
-      });
+      // minHeight is left as-is — the bracket components (DoubleSidedBracket,
+      // SingleBracket, DoubleBracket) set their own minHeight to achieve the right
+      // aspect ratio for the page. Manipulating it here caused connector misalignment.
 
       if (restoreFns.length === 0) return null;
       return runRestores;

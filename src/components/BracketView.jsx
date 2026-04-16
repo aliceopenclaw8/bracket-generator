@@ -263,7 +263,10 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
   // the Finals column (a single card), making the West/East sides look cramped.
   const totalMatches = (bracket.rounds[0] || []).length;
   const approxParticipants = totalMatches * 2;
-  const dsMinHeight = Math.max(500, approxParticipants * 25);
+  // Multiplier 42 yields aspect ratio close to landscape page (11:8.5 ≈ 1.3)
+  // for typical DS brackets. E.g. 18 teams → 36 participants × 42 = 1512px height
+  // with ~1800px width → 1.19 aspect (fills a landscape page well).
+  const dsMinHeight = Math.max(500, approxParticipants * 42);
 
   return (
     <div className="relative flex items-stretch gap-0" style={{ padding: '20px 0', minHeight: `${dsMinHeight}px` }} ref={outerRef}>
