@@ -166,16 +166,16 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
   const { team1, team2, winner, isBye } = match;
 
   if (isBye && winner) {
+    // Bye slots reserve layout space but render nothing. Any paint-producing
+    // style (className, background, opacity, rounded corners) causes html2canvas
+    // to rasterize a grey rectangle; keeping only sizing sidesteps the bug.
     const padY = sizing?.padY || 8;
     const minH = 2 * (2 * padY + 28) + 2;
     return (
       <div
-        className="flex items-center justify-center rounded-lg"
         style={{
           width: `${sizing?.cardW || 192}px`,
-          padding: `${padY}px 8px`,
           minHeight: `${minH}px`,
-          visibility: 'hidden',
         }}
         data-match-id={match.id}
         data-is-bye="true"
@@ -192,7 +192,8 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
   const champCardW = isChampionship ? Math.round(cardW * 1.5) : cardW;
   const isLine = bracketStyle === 'line';
 
-  // Championship cards get a dramatic accent background gradient + thick border + glow
+  // Championship cards get an accent gradient + thick border. The glow (boxShadow)
+  // was removed — html2canvas renders multi-layer shadows as solid black fills.
   const cardStyle = {
     width: `${champCardW}px`,
     border: isLine ? 'none' : `${isChampionship ? 4 : 1}px solid ${isChampionship ? theme.accent : theme.cardBorder}`,
@@ -200,9 +201,14 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
     ...(isChampionship
       ? {
           background: `linear-gradient(180deg, #fef3c7, #fefce8)`,
-          boxShadow: `0 0 0 2px ${theme.accent}, 0 25px 50px -12px rgb(0 0 0 / 0.25), 0 0 32px ${theme.accent}40`,
+          // boxShadow removed — html2canvas renders multi-layer shadows + alpha-hex
+          // colors as solid black fills. 4px border already gives enough emphasis.
         }
-      : !isLine ? { boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' } : {}),
+      : !isLine ? {
+          // Explicit background + no boxShadow — html2canvas v1.4.1 renders
+          // box-shadow as a solid grey fill on empty cards (confirmed bug).
+          background: theme.cardBg,
+        } : {}),
   };
 
   // Championship slots get extra padding for visual weight

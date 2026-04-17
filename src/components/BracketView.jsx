@@ -2,8 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import BracketRound from './BracketRound';
 import BracketConnectors from './BracketConnectors';
 import { Pill } from './MatchCard';
-import { getRoundLabel } from '../utils/bracketLogic';
-import { splitBracketForDoubleSided } from '../utils/bracketLogic';
+import { getRoundLabel, splitBracketForDoubleSided } from '../utils/bracketLogic';
 
 function computeBracketSizing(firstRoundMatchCount, layout, bracketType) {
   // Compact padY is OK since overflow-hidden was removed from cards. The +8 paddingBottom
@@ -29,14 +28,12 @@ function computeBracketSizing(firstRoundMatchCount, layout, bracketType) {
   return { cardW: 200, padY: 3, baseGap: 3, roundW: 400 };
 }
 
-function AutoScaleWrapper({ children, enabled }) {
+function AutoScaleWrapper({ children }) {
   const wrapperRef = useRef(null);
   const contentRef = useRef(null);
-  const [dims, setDims] = useState({ scale: 1, naturalW: 0, naturalH: 0, ready: !enabled });
+  const [dims, setDims] = useState({ scale: 1, stretchW: 0, stretchH: 0, ready: false });
 
   useEffect(() => {
-    if (!enabled) return;
-
     const content = contentRef.current;
     const wrapper = wrapperRef.current;
     if (!content || !wrapper) return;
@@ -45,12 +42,34 @@ function AutoScaleWrapper({ children, enabled }) {
       const naturalW = content.scrollWidth;
       const naturalH = content.scrollHeight;
       const availW = wrapper.clientWidth;
-      const availH = wrapper.clientHeight || Math.max(window.innerHeight - 280, 400);
+      const availH = wrapper.clientHeight;
 
-      if (naturalW <= 0 || naturalH <= 0) return;
+      if (naturalW <= 0 || naturalH <= 0 || availW <= 0 || availH <= 0) return;
 
-      const s = Math.max(0.35, Math.min(2, availW / naturalW, availH / naturalH));
-      setDims({ scale: s, naturalW, naturalH, ready: true });
+      // Stretch natural dimensions to match A4 aspect so uniform scaling fills
+      // both axes without distorting text — the bracket's flex layout
+      // redistributes children into the enlarged box.
+      const targetAspect = availW / availH;
+      let stretchW = naturalW;
+      let stretchH = naturalH;
+      if (naturalW / naturalH > targetAspect) {
+        stretchH = naturalW / targetAspect;
+      } else {
+        stretchW = naturalH * targetAspect;
+      }
+
+      // Cap upscale at 2x; allow unlimited downscale so large brackets still fit A4.
+      const s = Math.min(2, availW / stretchW, availH / stretchH);
+      setDims(prev => {
+        // Ignore sub-pixel jitter to stop ResizeObserver ping-pong at the aspect boundary.
+        if (prev.ready &&
+            Math.abs(prev.stretchW - stretchW) < 2 &&
+            Math.abs(prev.stretchH - stretchH) < 2 &&
+            Math.abs(prev.scale - s) < 0.005) {
+          return prev;
+        }
+        return { scale: s, stretchW, stretchH, ready: true };
+      });
     };
 
     const timer = setTimeout(update, 80);
@@ -59,14 +78,12 @@ function AutoScaleWrapper({ children, enabled }) {
     ro.observe(content); // Also observe content so scale recalculates when bracket changes size
 
     return () => { clearTimeout(timer); ro.disconnect(); };
-  }, [enabled]);
+  }, []);
 
-  if (!enabled) return children;
-
-  const { scale, naturalW, naturalH, ready } = dims;
+  const { scale, stretchW, stretchH, ready } = dims;
 
   return (
-    <div ref={wrapperRef} style={{ width: '100%' }}>
+    <div ref={wrapperRef} style={{ width: '100%', height: '100%' }}>
       <div
         ref={contentRef}
         data-auto-scale={scale}
@@ -74,10 +91,12 @@ function AutoScaleWrapper({ children, enabled }) {
           transformOrigin: 'top left',
           transform: `scale(${scale})`,
           width: 'max-content',
+          minWidth: `${stretchW}px`,
+          minHeight: `${stretchH}px`,
           opacity: ready ? 1 : 0,
           transition: 'opacity 0.2s',
-          marginRight: naturalW ? `${naturalW * (scale - 1)}px` : 0,
-          marginBottom: naturalH ? `${naturalH * (scale - 1)}px` : 0,
+          marginRight: `${stretchW * (scale - 1)}px`,
+          marginBottom: `${stretchH * (scale - 1)}px`,
         }}
       >
         {children}
@@ -124,14 +143,11 @@ function ChampionDisplay({ rounds, theme, showSeeds }) {
 
 function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
   const containerRef = useRef(null);
-  // Simple on-screen minHeight — export adjusts this dynamically for page fill.
-  const firstRoundCount = (bracket.rounds[0] || []).length;
-  const minH = Math.max(450, firstRoundCount * 90);
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative w-full h-full" ref={containerRef}>
       <BracketConnectors containerRef={containerRef} rounds={bracket.rounds} theme={theme} bracketStyle={bracketStyle} />
-      <div className="flex items-stretch gap-0" style={{ padding: '20px 0', minHeight: `${minH}px` }}>
+      <div className="flex items-stretch justify-around w-full h-full" style={{ padding: '20px 0' }}>
         {bracket.rounds.map((matches, roundIdx) => (
           <BracketRound
             key={roundIdx}
@@ -257,12 +273,8 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
   const eastRef = useRef(null);
   const outerRef = useRef(null);
 
-  // Simple on-screen minHeight — export adjusts this dynamically for page fill.
-  const totalMatches = (bracket.rounds[0] || []).length;
-  const dsMinHeight = Math.max(500, totalMatches * 2 * 25);
-
   return (
-    <div className="relative flex items-stretch gap-0" style={{ padding: '20px 0', minHeight: `${dsMinHeight}px` }} ref={outerRef}>
+    <div className="relative flex items-stretch justify-around w-full h-full" style={{ padding: '20px 0' }} ref={outerRef}>
       <FinalsConnectors containerRef={outerRef} west={west} east={east} finals={finals} theme={theme} bracketStyle={bracketStyle} />
 
       {/* West side (left to right) */}
@@ -353,21 +365,17 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, sizing, showSeed
     roundW: Math.max(168, Math.round(sizing.roundW * 0.7)),
   };
 
-  // Simple on-screen minHeight — export adjusts this dynamically for page fill.
-  const winnersR1Count = (doubleBracket.winnersRounds[0] || []).length;
-  const minH = Math.max(600, winnersR1Count * 2 * 35);
-
   return (
-    <div>
+    <div className="flex flex-col w-full h-full">
       {/* Section labels */}
-      <div className="flex justify-between items-center mb-1 px-1">
+      <div className="flex justify-between items-center mb-1 px-1 shrink-0">
         <Pill text="Winners Bracket" color={theme.accent} bg={theme.accent + '15'} fontSize={12} paddingX={14} />
         <Pill text="Losers Bracket" color={theme.textMuted} bg={theme.textMuted + '15'} fontSize={12} paddingX={14} />
       </div>
 
       {/* Side-by-side: Winners (L→R) | GF (center) | Losers (R→L) */}
-      <div className="relative flex items-stretch gap-0"
-           style={{ padding: '12px 0', minHeight: `${minH}px` }}
+      <div className="relative flex items-stretch justify-around flex-1 w-full"
+           style={{ padding: '12px 0' }}
            ref={outerRef}>
 
         <FinalsConnectors
@@ -449,20 +457,10 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
     ? allRounds[1].length
     : firstRound.length || 4;
   const sizing = computeBracketSizing(effectiveCount, layout, bracketType);
-  // Auto-scale thresholds:
-  // - Double-sided splits the bracket into west/east halves, so its natural width for N
-  //   teams is similar to a standard bracket for N/2 teams. DS brackets still overflow the
-  //   viewport past a certain size (even though they're narrower than Standard at the same
-  //   team count) because the halves plus finals still exceed the available width — so DS
-  //   gets auto-scale one bucket larger than Standard to keep it viewable without scroll.
-  // - Standard layout: unchanged (scale up to 16 teams, scroll beyond).
-  const shouldAutoScale = (layout === 'double-sided' || bracketType === 'double')
-    ? effectiveCount <= 32
-    : effectiveCount <= 16;
 
   return (
     <div
-      className="bracket-container rounded-2xl overflow-hidden mx-auto"
+      className="bracket-container rounded-2xl overflow-hidden mx-auto flex flex-col"
       style={{
         background: theme.bg,
         border: `1px solid ${theme.cardBorder}`,
@@ -473,7 +471,7 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
     >
       {/* Bracket Header */}
       <div
-        className="bracket-export-header flex items-center gap-3 px-6 py-4 border-b"
+        className="bracket-export-header flex items-center gap-3 px-6 py-4 border-b shrink-0"
         style={{ borderColor: theme.cardBorder, background: theme.headerBg }}
       >
         {logo && (
@@ -482,17 +480,20 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
         <h2 className="text-xl font-bold" style={{ color: theme.text }}>
           {title}
         </h2>
-        <span
-          className="text-xs px-2 py-1 rounded-full ml-auto"
-          style={{ background: theme.accent + '22', color: theme.accent }}
-        >
-          {bracketType === 'single' ? 'Single Elimination' : 'Double Elimination'}
-        </span>
+        <div className="ml-auto">
+          <Pill
+            text={bracketType === 'single' ? 'Single Elimination' : 'Double Elimination'}
+            color={theme.accent}
+            bg={theme.accent + '22'}
+            fontSize={11}
+            paddingX={14}
+          />
+        </div>
       </div>
 
-      {/* Bracket Content */}
-      <div className={`p-6 ${shouldAutoScale ? '' : 'overflow-x-auto bracket-scroll'}`}>
-        <AutoScaleWrapper enabled={shouldAutoScale}>
+      {/* Fills remaining A4 height; overflow-hidden is a safety net — AutoScaleWrapper normally keeps content in-box. */}
+      <div className="p-6 flex-1 min-h-0 overflow-hidden">
+        <AutoScaleWrapper>
           {bracketType === 'single' && bracket && layout === 'double-sided' && (
             <DoubleSidedBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} />
           )}

@@ -199,6 +199,7 @@ export default function SetupPanel({
           <span className="text-xs font-medium" style={{ color: theme.textMuted }}>Margin</span>
           <div className="flex rounded-md overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
             {[
+              { value: 0, label: 'None' },
               { value: 0.5, label: '0.5 in' },
               { value: 1, label: '1 in' },
             ].map(opt => (

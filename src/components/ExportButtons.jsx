@@ -8,60 +8,25 @@ const PAGE_H = 8.268;
 const A4_PX_W = 3508;
 const A4_PX_H = 2480;
 
-export default function ExportButtons({ bracketRef, title, theme, printMargin = 1 }) {
-  const overrideStyles = (el, newStyles) => {
-    if (!el) return null;
-    const orig = {};
-    for (const k of Object.keys(newStyles)) {
-      orig[k] = el.style[k];
-      el.style[k] = newStyles[k];
-    }
-    return () => { for (const k of Object.keys(orig)) el.style[k] = orig[k]; };
-  };
-
-  // Minimal capture prep — ONLY strip cosmetic chrome.
-  // The bracket on screen already has the correct layout, connectors, and sizing.
-  // Changing transform/padding/minHeight during capture breaks everything.
-  const prepareCapture = () => {
-    const restoreFns = [];
-    const runRestores = () => restoreFns.forEach(fn => {
-      try { fn(); } catch (e) { console.error('restore failed:', e); }
-    });
-
-    try {
-      const containerEl = bracketRef.current?.querySelector('.bracket-container');
-      const headerEl = bracketRef.current?.querySelector('.bracket-export-header');
-
-      // Hide bracket header (title bar) — saves vertical space
-      const r1 = overrideStyles(headerEl, { display: 'none' });
-      if (r1) restoreFns.push(r1);
-
-      // Remove border and rounded corners — no outline in export
-      const r2 = overrideStyles(containerEl, { border: 'none', borderRadius: '0' });
-      if (r2) restoreFns.push(r2);
-
-      if (restoreFns.length === 0) return null;
-      return runRestores;
-    } catch (e) {
-      console.error('prepareCapture failed:', e);
-      runRestores();
-      throw e;
-    }
-  };
+export default function ExportButtons({ bracketRef, title, theme, printMargin = 0 }) {
+  // WYSIWYG: capture bracketRef exactly as rendered. Never mutate the DOM
+  // before capture — hiding the header or changing sizes triggers
+  // AutoScaleWrapper's ResizeObserver mid-capture and the bracket rescales.
 
   const handlePNG = async () => {
-    if (!bracketRef.current) return;
-    let restore = null;
+    // Capture .bracket-container directly, not the wrapper — wrapper includes
+    // mx-auto gutters which break A4 aspect and cause letterboxing in export.
+    const target = bracketRef.current?.querySelector('.bracket-container');
+    if (!target) return;
     try {
-      restore = prepareCapture();
-      const canvas = await html2canvas(bracketRef.current, {
+      const canvas = await html2canvas(target, {
         backgroundColor: theme.bg,
         scale: 3,
         useCORS: true,
         logging: false,
       });
       if (canvas.width === 0 || canvas.height === 0) {
-        throw new Error('html2canvas returned empty canvas');
+        throw new Error('Rendered canvas is empty');
       }
       // Place on A4 canvas at 300 DPI with margins
       const marginPx = Math.round(printMargin * 300);
@@ -89,24 +54,21 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
     } catch (err) {
       console.error('PNG export failed:', err);
       alert(`Failed to export as PNG: ${err.message || 'Unknown error'}. Please try again.`);
-    } finally {
-      if (restore) restore();
     }
   };
 
   const handlePDF = async () => {
-    if (!bracketRef.current) return;
-    let restore = null;
+    const target = bracketRef.current?.querySelector('.bracket-container');
+    if (!target) return;
     try {
-      restore = prepareCapture();
-      const canvas = await html2canvas(bracketRef.current, {
+      const canvas = await html2canvas(target, {
         backgroundColor: theme.bg,
         scale: 3,
         useCORS: true,
         logging: false,
       });
       if (canvas.width === 0 || canvas.height === 0) {
-        throw new Error('html2canvas returned empty canvas');
+        throw new Error('Rendered canvas is empty');
       }
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'in', format: 'a4' });
@@ -124,8 +86,6 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
     } catch (err) {
       console.error('PDF export failed:', err);
       alert(`Failed to export as PDF: ${err.message || 'Unknown error'}. Please try again.`);
-    } finally {
-      if (restore) restore();
     }
   };
 

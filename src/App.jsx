@@ -22,7 +22,7 @@ export default function App() {
   const [themeName, setThemeName] = useState('bw');
   const [bracketType, setBracketType] = useState('single');
   const [showSeeds, setShowSeeds] = useState(true);
-  const [printMargin, setPrintMargin] = useState(1);
+  const [printMargin, setPrintMargin] = useState(0);
   const [layout, setLayout] = useState('standard');
   const [bracketStyle, setBracketStyle] = useState('boxed');
   const [participantsMode, setParticipantsMode] = useState('add-teams');
