@@ -219,8 +219,8 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
   return (
     <div className={isChampionship ? 'flex flex-col items-center' : undefined}>
       {isChampionship && (
-        <div style={{ marginBottom: '10px' }}>
-          <Pill text="🏆 CHAMPIONSHIP" color={theme.accent} bg={theme.accent + '22'} fontSize={13} paddingX={18} />
+        <div style={{ marginBottom: '4px' }}>
+          <Pill text="🏆 CHAMPIONSHIP" color={theme.accent} bg={theme.accent + '22'} fontSize={9} paddingX={10} />
         </div>
       )}
       <div style={cardStyle} data-match-id={match.id}>

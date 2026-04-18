@@ -18,8 +18,10 @@ export default function BracketRound({
   const roundW = sizing?.roundW || 224;
 
   return (
-    <div className="flex flex-col items-center shrink-0" style={{ minWidth: `${roundW}px` }}>
-      <Pill text={roundLabel} color={theme.roundLabel} bg={theme.roundLabel + '15'} fontSize={11} paddingX={14} marginBottom={14} />
+    // flex:1 so rounds grow to fill the stretched parent width instead of leaving gaps.
+    // minWidth preserves legibility at small counts; flex-grow absorbs extra space.
+    <div className="flex flex-col items-center" style={{ minWidth: `${roundW}px`, flex: '1 1 0' }}>
+      <Pill text={roundLabel} color={theme.roundLabel} bg={theme.roundLabel + '15'} fontSize={8} paddingX={8} marginBottom={6} />
       <div className="flex flex-col justify-around flex-1">
         {matches.map((match) => (
           <MatchCard
