@@ -110,6 +110,7 @@ export default function SetupPanel({
             ].map(opt => (
               <button
                 key={opt.value}
+                data-testid={`bracket-type-${opt.value}`}
                 onClick={() => setBracketType(opt.value)}
                 className="px-2 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap"
                 style={{
@@ -234,6 +235,7 @@ export default function SetupPanel({
           {presets.map(n => (
             <button
               key={n}
+              data-testid={`preset-${n}`}
               onClick={() => handlePreset(n)}
               className="px-4 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer"
               style={{
@@ -255,6 +257,7 @@ export default function SetupPanel({
             onChange={(e) => { setCustomCount(e.target.value); setCustomCountError(''); }}
             onKeyDown={(e) => e.key === 'Enter' && handleCustomCount()}
             placeholder="Custom # of teams"
+            data-testid="custom-count-input"
             className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
             style={{
               background: theme.cardBg,
@@ -264,6 +267,7 @@ export default function SetupPanel({
           />
           <button
             onClick={handleCustomCount}
+            data-testid="custom-count-set"
             className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer"
             style={{
               background: theme.cardBg,
@@ -418,6 +422,7 @@ export default function SetupPanel({
       {/* Generate Button */}
       <button
         onClick={onGenerate}
+        data-testid="generate-bracket"
         disabled={participantsMode === 'add-teams' ? validCount < 2 : participantNames.length < 2}
         className="w-full py-3 rounded-xl text-lg font-bold transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         style={{
