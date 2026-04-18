@@ -1,12 +1,12 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
-// A4 landscape dimensions in inches (297mm × 210mm)
-const PAGE_W = 11.693;
-const PAGE_H = 8.268;
-// A4 at 300 DPI for print-ready PNG
-const A4_PX_W = 3508;
-const A4_PX_H = 2480;
+// US Letter landscape dimensions in inches (11" × 8.5")
+const PAGE_W = 11;
+const PAGE_H = 8.5;
+// US Letter at 300 DPI for print-ready PNG
+const LETTER_PX_W = 3300;
+const LETTER_PX_H = 2550;
 
 export default function ExportButtons({ bracketRef, title, theme, printMargin = 0 }) {
   // WYSIWYG: capture bracketRef exactly as rendered. Never mutate the DOM
@@ -14,11 +14,11 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
   // AutoScaleWrapper's ResizeObserver mid-capture and the bracket rescales.
 
   const handlePNG = async () => {
-    // Capture .bracket-container directly, not the wrapper — wrapper includes
-    // mx-auto gutters which break A4 aspect and cause letterboxing in export.
-    const target = bracketRef.current?.querySelector('.bracket-container');
-    if (!target) return;
     try {
+      // Capture .bracket-container directly, not the wrapper — wrapper includes
+      // mx-auto gutters which break Letter aspect and cause letterboxing in export.
+      const target = bracketRef.current?.querySelector('.bracket-container');
+      if (!target) throw new Error('Bracket not ready — try regenerating');
       const canvas = await html2canvas(target, {
         backgroundColor: theme.bg,
         scale: 3,
@@ -28,28 +28,28 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       if (canvas.width === 0 || canvas.height === 0) {
         throw new Error('Rendered canvas is empty');
       }
-      // Place on A4 canvas at 300 DPI with margins
+      // Place on US Letter canvas at 300 DPI with margins
       const marginPx = Math.round(printMargin * 300);
-      const maxW = A4_PX_W - marginPx * 2;
-      const maxH = A4_PX_H - marginPx * 2;
+      const maxW = LETTER_PX_W - marginPx * 2;
+      const maxH = LETTER_PX_H - marginPx * 2;
       const ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
       const imgW = Math.round(canvas.width * ratio);
       const imgH = Math.round(canvas.height * ratio);
 
-      const a4 = document.createElement('canvas');
-      a4.width = A4_PX_W;
-      a4.height = A4_PX_H;
-      const ctx = a4.getContext('2d');
+      const page = document.createElement('canvas');
+      page.width = LETTER_PX_W;
+      page.height = LETTER_PX_H;
+      const ctx = page.getContext('2d');
       ctx.fillStyle = theme.bg;
-      ctx.fillRect(0, 0, A4_PX_W, A4_PX_H);
-      const x = Math.round((A4_PX_W - imgW) / 2);
+      ctx.fillRect(0, 0, LETTER_PX_W, LETTER_PX_H);
+      const x = Math.round((LETTER_PX_W - imgW) / 2);
       const widthLimited = (maxW / canvas.width) < (maxH / canvas.height);
       const y = widthLimited ? marginPx : Math.round(marginPx + (maxH - imgH) / 2);
       ctx.drawImage(canvas, x, y, imgW, imgH);
 
       const link = document.createElement('a');
       link.download = `${title.replace(/\s+/g, '_')}.png`;
-      link.href = a4.toDataURL('image/png');
+      link.href = page.toDataURL('image/png');
       link.click();
     } catch (err) {
       console.error('PNG export failed:', err);
@@ -58,9 +58,9 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
   };
 
   const handlePDF = async () => {
-    const target = bracketRef.current?.querySelector('.bracket-container');
-    if (!target) return;
     try {
+      const target = bracketRef.current?.querySelector('.bracket-container');
+      if (!target) throw new Error('Bracket not ready — try regenerating');
       const canvas = await html2canvas(target, {
         backgroundColor: theme.bg,
         scale: 3,
@@ -71,7 +71,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
         throw new Error('Rendered canvas is empty');
       }
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'in', format: 'a4' });
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'in', format: 'letter' });
       const margin = printMargin;
       const maxW = PAGE_W - margin * 2;
       const maxH = PAGE_H - margin * 2;
