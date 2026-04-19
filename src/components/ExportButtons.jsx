@@ -12,17 +12,11 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
   // WYSIWYG: capture bracketRef exactly as rendered. Never mutate the live DOM
   // before capture — hiding the header or changing sizes triggers
   // AutoScaleWrapper's ResizeObserver mid-capture and the bracket rescales.
-  // onclone operates on a detached clone, so it's safe to mutate there.
   const captureOptions = {
     backgroundColor: theme.bg,
     scale: 3,
     useCORS: true,
     logging: false,
-    onclone: (doc) => {
-      doc.querySelectorAll('[data-export-hide]').forEach((el) => {
-        el.style.display = 'none';
-      });
-    },
   };
 
   const handlePNG = async () => {

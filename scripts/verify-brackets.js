@@ -6,9 +6,9 @@
  *   2. Configures bracket via UI (preset button or custom count input).
  *   3. Selects single/double elimination.
  *   4. Clicks Generate.
- *   5. Measures .bracket-container, .bracket-export-header content.
+ *   5. Measures .bracket-container and its content wrapper.
  *   6. Asserts Letter landscape aspect ratio (~1.294).
- *   7. Asserts (header + bracket content) fills container within ±8px.
+ *   7. Asserts bracket content fills container within ±8px.
  *   8. Asserts no descendant overflows the container bounds.
  *   9. Saves a screenshot.
  *
@@ -84,10 +84,8 @@ async function measureBracket(page) {
   return await page.evaluate(() => {
     const container = document.querySelector('.bracket-container');
     if (!container) return { error: 'no .bracket-container' };
-    const header = container.querySelector('.bracket-export-header');
-    const innerWrapper = container.children[1]; // the padded flex-1 div that wraps AutoScaleWrapper
+    const innerWrapper = container.children[0]; // the padded flex-1 div wrapping AutoScaleWrapper
     const cRect = container.getBoundingClientRect();
-    const hRect = header ? header.getBoundingClientRect() : null;
     const wRect = innerWrapper ? innerWrapper.getBoundingClientRect() : null;
     // innerWrapperClient measures the inside-padding rectangle — that's what AutoScaleWrapper
     // measures as availW/availH via clientWidth/Height. The bracket content must fit inside this.
@@ -149,8 +147,6 @@ async function measureBracket(page) {
     return {
       container: { left: cRect.left, top: cRect.top, right: cRect.right, bottom: cRect.bottom,
                    width: cRect.width, height: cRect.height },
-      header: hRect ? { height: hRect.height, width: hRect.width,
-                        left: hRect.left, right: hRect.right } : null,
       innerWrapper: wRect ? { height: wRect.height, width: wRect.width } : null,
       innerWrapperClient: wClient,
       contentBBox,
@@ -173,13 +169,12 @@ function evaluateScenario(name, meta) {
     );
   }
 
-  // Fill check — (header + inner content wrapper) should equal container height ± tolerance.
+  // Fill check — inner content wrapper should equal container height ± tolerance.
   // innerWrapper is the p-2 flex-1 sibling that contains AutoScaleWrapper.
-  if (meta.header && meta.innerWrapper) {
-    const combined = meta.header.height + meta.innerWrapper.height;
-    if (Math.abs(combined - meta.container.height) > FILL_TOLERANCE_PX) {
+  if (meta.innerWrapper) {
+    if (Math.abs(meta.innerWrapper.height - meta.container.height) > FILL_TOLERANCE_PX) {
       issues.push(
-        `header+content ≠ container height: ${combined.toFixed(1)} vs ${meta.container.height.toFixed(1)} (tolerance ${FILL_TOLERANCE_PX})`
+        `content ≠ container height: ${meta.innerWrapper.height.toFixed(1)} vs ${meta.container.height.toFixed(1)} (tolerance ${FILL_TOLERANCE_PX})`
       );
     }
   }
@@ -203,13 +198,9 @@ function evaluateScenario(name, meta) {
     const gaps = {
       left: meta.contentBBox.left - meta.container.left,
       right: meta.container.right - meta.contentBBox.right,
-      top: meta.contentBBox.top - (meta.header ? meta.header.bottom || (meta.container.top + meta.header.height) : meta.container.top),
+      top: meta.contentBBox.top - meta.container.top,
       bottom: meta.container.bottom - meta.contentBBox.bottom,
     };
-    // Derive header.bottom if missing
-    if (meta.header && !meta.header.bottom) {
-      gaps.top = meta.contentBBox.top - (meta.container.top + meta.header.height);
-    }
     ['left', 'right', 'top', 'bottom'].forEach(side => {
       if (gaps[side] < MIN_EDGE_GAP) {
         issues.push(`content touches ${side} edge: gap=${gaps[side].toFixed(1)}px (min ${MIN_EDGE_GAP})`);
