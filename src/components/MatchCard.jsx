@@ -216,12 +216,39 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
     ? { ...sizing, padY: Math.max((sizing?.padY || 8) + 6, 14) }
     : sizing;
 
+  const champsBoxStyle = isChampionship
+    ? {
+        width: `${champCardW}px`,
+        border: `2px solid ${theme.accent}`,
+        borderRadius: '8px',
+        background: `linear-gradient(180deg, #fef3c7, #fefce8)`,
+        overflow: 'hidden',
+      }
+    : null;
+
   return (
     <div className={isChampionship ? 'flex flex-col items-center' : undefined}>
       {isChampionship && (
-        <div style={{ marginBottom: '4px' }}>
-          <Pill text="🏆 CHAMPIONSHIP" color={theme.accent} bg={theme.accent + '22'} fontSize={9} paddingX={10} />
-        </div>
+        <>
+          <div style={{ marginBottom: '4px' }}>
+            <Pill text="🏆 CHAMPS" color={theme.accent} bg={theme.accent + '22'} fontSize={9} paddingX={10} />
+          </div>
+          <div style={champsBoxStyle}>
+            <TeamSlot
+              team={winner}
+              isWinner={!!winner}
+              theme={theme}
+              position="bottom"
+              bracketStyle={bracketStyle}
+              sizing={champSizing}
+              showSeeds={showSeeds}
+            />
+          </div>
+          <div style={{ width: '2px', height: '10px', background: theme.connector }} />
+          <div style={{ marginBottom: '4px' }}>
+            <Pill text="FINALS" color={theme.accent} bg={theme.accent + '22'} fontSize={9} paddingX={10} />
+          </div>
+        </>
       )}
       <div style={cardStyle} data-match-id={match.id}>
         <TeamSlot

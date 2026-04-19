@@ -154,42 +154,6 @@ function AutoScaleWrapper({ children }) {
   );
 }
 
-function ChampionDisplay({ rounds, theme, showSeeds }) {
-  const lastRound = rounds[rounds.length - 1];
-  if (!lastRound || lastRound.length !== 1) return null;
-  const finalMatch = lastRound[0];
-  if (!finalMatch.winner) return null;
-
-  return (
-    <div className="flex flex-col items-center justify-center shrink-0 ml-8" style={{ minWidth: '180px' }}>
-      <div
-        className="text-xs font-bold uppercase tracking-wider mb-3 px-3 py-1 rounded-full"
-        style={{ color: theme.accent, background: theme.accent + '15' }}
-      >
-        Champion
-      </div>
-      <div
-        className="rounded-xl p-4 text-center shadow-2xl"
-        style={{
-          background: `linear-gradient(135deg, ${theme.accent}, ${theme.accent}cc)`,
-          border: `2px solid ${theme.accent}`,
-          minWidth: '160px',
-        }}
-      >
-        <div className="text-2xl mb-2">🏆</div>
-        <div className="font-bold text-lg" style={{ color: theme.winnerText }}>
-          {finalMatch.winner.name}
-        </div>
-        {showSeeds !== false && finalMatch.winner.seed && (
-          <div className="text-xs mt-1 opacity-70" style={{ color: theme.winnerText }}>
-            Seed #{finalMatch.winner.seed}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
   const containerRef = useRef(null);
 
@@ -212,7 +176,6 @@ function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bra
             bracketStyle={bracketStyle}
           />
         ))}
-        <ChampionDisplay rounds={bracket.rounds} theme={theme} showSeeds={showSeeds} />
       </div>
     </div>
   );
@@ -353,10 +316,7 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
           decorative "Finals" pill, which (a) duplicated the auto-rendered "Finals" label that
           BracketRound already generates via getRoundLabel(0, 1) and (b) offset the Finals card
           vertically relative to the Semifinal cards because the whole block was vertically
-          centered instead of the card.
-          ChampionDisplay is rendered absolutely so it doesn't consume row space — otherwise
-          the flex sibling would push the East side sideways once a winner exists, breaking
-          the symmetry of the double-sided layout. */}
+          centered instead of the card. */}
       <div className="relative flex items-stretch gap-0 mx-4">
         <BracketRound
           matches={finals}
@@ -371,11 +331,6 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
           isChampionship
           bracketStyle={bracketStyle}
         />
-        {finals[0]?.winner && (
-          <div className="absolute left-1/2 -translate-x-1/2 -ml-8 top-full mt-2 z-20">
-            <ChampionDisplay rounds={[finals]} theme={theme} showSeeds={showSeeds} />
-          </div>
-        )}
       </div>
 
       {/* East side (right to left, reversed order) */}
