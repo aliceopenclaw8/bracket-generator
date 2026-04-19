@@ -483,7 +483,7 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
         <h2 className="text-[10px] font-bold leading-tight" style={{ color: theme.text }}>
           {title}
         </h2>
-        <div className="ml-auto">
+        <div className="ml-auto" data-export-hide="true">
           <Pill
             text={bracketType === 'single' ? 'Single Elimination' : 'Double Elimination'}
             color={theme.accent}

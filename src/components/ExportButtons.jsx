@@ -9,9 +9,21 @@ const LETTER_PX_W = 3300;
 const LETTER_PX_H = 2550;
 
 export default function ExportButtons({ bracketRef, title, theme, printMargin = 0 }) {
-  // WYSIWYG: capture bracketRef exactly as rendered. Never mutate the DOM
+  // WYSIWYG: capture bracketRef exactly as rendered. Never mutate the live DOM
   // before capture — hiding the header or changing sizes triggers
   // AutoScaleWrapper's ResizeObserver mid-capture and the bracket rescales.
+  // onclone operates on a detached clone, so it's safe to mutate there.
+  const captureOptions = {
+    backgroundColor: theme.bg,
+    scale: 3,
+    useCORS: true,
+    logging: false,
+    onclone: (doc) => {
+      doc.querySelectorAll('[data-export-hide]').forEach((el) => {
+        el.style.display = 'none';
+      });
+    },
+  };
 
   const handlePNG = async () => {
     try {
@@ -19,12 +31,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       // mx-auto gutters which break Letter aspect and cause letterboxing in export.
       const target = bracketRef.current?.querySelector('.bracket-container');
       if (!target) throw new Error('Bracket not ready — try regenerating');
-      const canvas = await html2canvas(target, {
-        backgroundColor: theme.bg,
-        scale: 3,
-        useCORS: true,
-        logging: false,
-      });
+      const canvas = await html2canvas(target, captureOptions);
       if (canvas.width === 0 || canvas.height === 0) {
         throw new Error('Rendered canvas is empty');
       }
@@ -61,12 +68,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
     try {
       const target = bracketRef.current?.querySelector('.bracket-container');
       if (!target) throw new Error('Bracket not ready — try regenerating');
-      const canvas = await html2canvas(target, {
-        backgroundColor: theme.bg,
-        scale: 3,
-        useCORS: true,
-        logging: false,
-      });
+      const canvas = await html2canvas(target, captureOptions);
       if (canvas.width === 0 || canvas.height === 0) {
         throw new Error('Rendered canvas is empty');
       }
