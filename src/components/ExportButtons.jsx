@@ -43,8 +43,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       ctx.fillStyle = theme.bg;
       ctx.fillRect(0, 0, LETTER_PX_W, LETTER_PX_H);
       const x = Math.round((LETTER_PX_W - imgW) / 2);
-      const widthLimited = (maxW / canvas.width) < (maxH / canvas.height);
-      const y = widthLimited ? marginPx : Math.round(marginPx + (maxH - imgH) / 2);
+      const y = Math.round((LETTER_PX_H - imgH) / 2);
       ctx.drawImage(canvas, x, y, imgW, imgH);
 
       const link = document.createElement('a');
@@ -79,8 +78,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       const imgW = canvas.width * ratio;
       const imgH = canvas.height * ratio;
       const x = (PAGE_W - imgW) / 2;
-      const widthLimited = (maxW / canvas.width) < (maxH / canvas.height);
-      const y = widthLimited ? margin : margin + (maxH - imgH) / 2;
+      const y = (PAGE_H - imgH) / 2;
       pdf.addImage(imgData, 'PNG', x, y, imgW, imgH);
       pdf.save(`${title.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
