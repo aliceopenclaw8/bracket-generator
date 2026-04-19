@@ -75,7 +75,7 @@ function Pill({ text, color, bg, fontSize = 11, paddingX = 14, marginBottom = 0 
 
 export { Pill };
 
-function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketStyle, sizing, showSeeds }) {
+function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketStyle, sizing, showSeeds, isChampionship }) {
   const isEmpty = !team;
   const displayName = team?.name || '';
   const isLine = bracketStyle === 'line';
@@ -107,9 +107,16 @@ function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketStyle, si
         paddingRight: '16px',
         paddingTop: `${padY + 4}px`,
         paddingBottom: `${padY + 8}px`,
-        background: isWinner ? theme.winnerBg : theme.cardBg,
-        borderBottom: position === 'top' ? `1px solid ${theme.cardBorder}` : 'none',
-        borderRadius: position === 'top' ? '8px 8px 0 0' : '0 0 8px 8px',
+        // Each slot is now a fully self-contained card (full border, all corners rounded)
+        // so the parent wrapper can space them with a gap between the two boxes.
+        // Championship slots use the accent gradient + 4px accent border individually
+        // because the outer wrapper no longer carries the championship styling (the gap
+        // would expose the outer gradient between the two slots otherwise).
+        background: isChampionship
+          ? 'linear-gradient(180deg, #fef3c7, #fefce8)'
+          : (isWinner ? theme.winnerBg : theme.cardBg),
+        border: `${isChampionship ? 4 : 1}px solid ${isChampionship ? theme.accent : theme.cardBorder}`,
+        borderRadius: '8px',
       };
 
   // No overflow:hidden — that's what was clipping descenders in html2canvas.
@@ -164,13 +171,22 @@ function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketStyle, si
 
 export default function MatchCard({ match, theme, onAdvanceWinner, bracketSection, sizing, showSeeds, isChampionship, bracketStyle }) {
   const { team1, team2, winner, isBye } = match;
+  const isLine = bracketStyle === 'line';
+
+  // Proportional to padY so gap scales across the 8 sizing tiers (padY 3..14 maps to gap 3..10).
+  // Floor at 3px so dense 64-match brackets still show separation.
+  // Applied only in boxed mode — line style keeps its original flush layout.
+  const padY = sizing?.padY || 8;
+  const slotGap = Math.max(3, Math.round(padY * 0.7));
 
   if (isBye && winner) {
     // Bye slots reserve layout space but render nothing. Any paint-producing
     // style (className, background, opacity, rounded corners) causes html2canvas
     // to rasterize a grey rectangle; keeping only sizing sidesteps the bug.
-    const padY = sizing?.padY || 8;
-    const minH = 2 * (2 * padY + 28) + 2;
+    // minH formula: two slots (each 2*padY + 28 content height) + slotGap between
+    // them + 2px for the extra top+bottom borders that now exist on two separate
+    // cards (vs. the old shared outer border). Keeps sibling real matches aligned.
+    const minH = 2 * (2 * padY + 28) + slotGap + 2;
     return (
       <div
         style={{
@@ -190,26 +206,21 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
 
   const cardW = sizing?.cardW || 192;
   const champCardW = isChampionship ? Math.round(cardW * 1.5) : cardW;
-  const isLine = bracketStyle === 'line';
 
-  // Championship cards get an accent gradient + thick border. The glow (boxShadow)
-  // was removed — html2canvas renders multi-layer shadows as solid black fills.
-  const cardStyle = {
-    width: `${champCardW}px`,
-    border: isLine ? 'none' : `${isChampionship ? 4 : 1}px solid ${isChampionship ? theme.accent : theme.cardBorder}`,
-    borderRadius: isLine ? '0' : '8px',
-    ...(isChampionship
-      ? {
-          background: `linear-gradient(180deg, #fef3c7, #fefce8)`,
-          // boxShadow removed — html2canvas renders multi-layer shadows + alpha-hex
-          // colors as solid black fills. 4px border already gives enough emphasis.
-        }
-      : !isLine ? {
-          // Explicit background + no boxShadow — html2canvas v1.4.1 renders
-          // box-shadow as a solid grey fill on empty cards (confirmed bug).
-          background: theme.cardBg,
-        } : {}),
-  };
+  // Outer wrapper is now a bare layout container in boxed mode — each TeamSlot
+  // carries its own border/background/radius (and championship styling). This
+  // lets us put a real gap between the two slots so they look like two boxes.
+  // Line mode keeps its original flush layout (no gap, no border on wrapper).
+  const cardStyle = isLine
+    ? {
+        width: `${champCardW}px`,
+      }
+    : {
+        width: `${champCardW}px`,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: `${slotGap}px`,
+      };
 
   // Championship slots get extra padding for visual weight
   const champSizing = isChampionship
@@ -233,6 +244,7 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
           bracketStyle={bracketStyle}
           sizing={champSizing}
           showSeeds={showSeeds}
+          isChampionship={isChampionship}
         />
         <TeamSlot
           team={team2}
@@ -243,6 +255,7 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
           bracketStyle={bracketStyle}
           sizing={champSizing}
           showSeeds={showSeeds}
+          isChampionship={isChampionship}
         />
       </div>
     </div>
