@@ -154,42 +154,6 @@ function AutoScaleWrapper({ children }) {
   );
 }
 
-function ChampionDisplay({ rounds, theme, showSeeds }) {
-  const lastRound = rounds[rounds.length - 1];
-  if (!lastRound || lastRound.length !== 1) return null;
-  const finalMatch = lastRound[0];
-  if (!finalMatch.winner) return null;
-
-  return (
-    <div className="flex flex-col items-center justify-center shrink-0 ml-8" style={{ minWidth: '180px' }}>
-      <div
-        className="text-xs font-bold uppercase tracking-wider mb-3 px-3 py-1 rounded-full"
-        style={{ color: theme.accent, background: theme.accent + '15' }}
-      >
-        Champion
-      </div>
-      <div
-        className="rounded-xl p-4 text-center shadow-2xl"
-        style={{
-          background: `linear-gradient(135deg, ${theme.accent}, ${theme.accent}cc)`,
-          border: `2px solid ${theme.accent}`,
-          minWidth: '160px',
-        }}
-      >
-        <div className="text-2xl mb-2">🏆</div>
-        <div className="font-bold text-lg" style={{ color: theme.winnerText }}>
-          {finalMatch.winner.name}
-        </div>
-        {showSeeds !== false && finalMatch.winner.seed && (
-          <div className="text-xs mt-1 opacity-70" style={{ color: theme.winnerText }}>
-            Seed #{finalMatch.winner.seed}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
   const containerRef = useRef(null);
 
@@ -212,7 +176,6 @@ function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bra
             bracketStyle={bracketStyle}
           />
         ))}
-        <ChampionDisplay rounds={bracket.rounds} theme={theme} showSeeds={showSeeds} />
       </div>
     </div>
   );
@@ -353,10 +316,7 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
           decorative "Finals" pill, which (a) duplicated the auto-rendered "Finals" label that
           BracketRound already generates via getRoundLabel(0, 1) and (b) offset the Finals card
           vertically relative to the Semifinal cards because the whole block was vertically
-          centered instead of the card.
-          ChampionDisplay is rendered absolutely so it doesn't consume row space — otherwise
-          the flex sibling would push the East side sideways once a winner exists, breaking
-          the symmetry of the double-sided layout. */}
+          centered instead of the card. */}
       <div className="relative flex items-stretch gap-0 mx-4">
         <BracketRound
           matches={finals}
@@ -371,11 +331,6 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
           isChampionship
           bracketStyle={bracketStyle}
         />
-        {finals[0]?.winner && (
-          <div className="absolute left-1/2 -translate-x-1/2 -ml-8 top-full mt-2 z-20">
-            <ChampionDisplay rounds={[finals]} theme={theme} showSeeds={showSeeds} />
-          </div>
-        )}
       </div>
 
       {/* East side (right to left, reversed order) */}
@@ -401,7 +356,178 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
   );
 }
 
-function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
+// Both winners-last and losers-last feed GF's left edge from different Y
+// positions. No mirroring: sources approach from the left, GF sits to the right.
+function StackedFinalsConnectors({ containerRef, winnersRounds, losersRounds, finals, theme, bracketStyle = 'boxed' }) {
+  const [lines, setLines] = useState([]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !finals.length) return;
+
+    const updateLines = () => {
+      const containerRect = container.getBoundingClientRect();
+      const scaleEl = container.closest('[data-auto-scale]');
+      const scale = scaleEl ? parseFloat(scaleEl.dataset.autoScale) || 1 : 1;
+      const newLines = [];
+
+      // Line style anchors Y between the two team-slot underlines; boxed style
+      // anchors at the card's vertical midpoint. Mirrors FinalsConnectors.
+      const computeMatchY = (matchEl, matchRect) => {
+        if (bracketStyle === 'line') {
+          const topSlot = matchEl.querySelector('[data-team-slot="top"]');
+          const bottomSlot = matchEl.querySelector('[data-team-slot="bottom"]');
+          if (topSlot && bottomSlot) {
+            const topRect = topSlot.getBoundingClientRect();
+            const bottomRect = bottomSlot.getBoundingClientRect();
+            return ((topRect.bottom + bottomRect.bottom) / 2 - containerRect.top) / scale;
+          }
+        }
+        return (matchRect.top - containerRect.top + matchRect.height / 2) / scale;
+      };
+
+      const finalsEl = container.querySelector(`[data-match-id="${finals[0].id}"]`);
+      if (!finalsEl) return;
+      const finalsRect = finalsEl.getBoundingClientRect();
+      const finalsLeftX = (finalsRect.left - containerRect.left) / scale;
+      const finalsCenterY = computeMatchY(finalsEl, finalsRect);
+
+      const drawFromSource = (matchEl) => {
+        if (!matchEl) return;
+        const r = matchEl.getBoundingClientRect();
+        const srcX = (r.right - containerRect.left) / scale;
+        const srcY = computeMatchY(matchEl, r);
+        const midX = (srcX + finalsLeftX) / 2;
+        newLines.push({ x1: srcX, y1: srcY, x2: midX, y2: srcY });
+        newLines.push({ x1: midX, y1: srcY, x2: midX, y2: finalsCenterY });
+        newLines.push({ x1: midX, y1: finalsCenterY, x2: finalsLeftX, y2: finalsCenterY });
+      };
+
+      const winnersLast = winnersRounds[winnersRounds.length - 1]?.[0];
+      const losersLast = losersRounds[losersRounds.length - 1]?.[0];
+      if (winnersLast) drawFromSource(container.querySelector(`[data-match-id="${winnersLast.id}"]`));
+      if (losersLast) drawFromSource(container.querySelector(`[data-match-id="${losersLast.id}"]`));
+
+      setLines(newLines);
+    };
+
+    const timer = setTimeout(updateLines, 80);
+    const observer = new ResizeObserver(updateLines);
+    observer.observe(container);
+    return () => { clearTimeout(timer); observer.disconnect(); };
+  }, [containerRef, winnersRounds, losersRounds, finals, theme, bracketStyle]);
+
+  return (
+    <svg className="absolute inset-0 pointer-events-none"
+         style={{ width: '100%', height: '100%', overflow: 'visible', zIndex: 10 }}>
+      {lines.map((line, i) => (
+        <line key={i} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2}
+              stroke={theme.connector} strokeWidth="2" strokeLinecap="round" />
+      ))}
+    </svg>
+  );
+}
+
+function DoubleBracketStacked({ doubleBracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
+  const winnersRef = useRef(null);
+  const losersRef = useRef(null);
+  const outerRef = useRef(null);
+
+  // W-R1 has the most matches and must fit in ~half-page height; shrinking padY
+  // here prevents that column from overflowing into the losers block below.
+  const stackedSizing = {
+    ...sizing,
+    padY: Math.max(2, Math.round(sizing.padY * 0.35)),
+  };
+
+  return (
+    <div className="relative flex w-full h-full py-1" ref={outerRef}>
+      <StackedFinalsConnectors
+        containerRef={outerRef}
+        winnersRounds={doubleBracket.winnersRounds}
+        losersRounds={doubleBracket.losersRounds}
+        finals={doubleBracket.grandFinals}
+        theme={theme}
+        bracketStyle={bracketStyle}
+      />
+
+      {/* Left area: Winners (top) + Losers (bottom) stacked.
+          overflow:hidden on each block ensures any residual overflow is
+          clipped instead of bleeding into the other bracket's area. */}
+      <div className="flex flex-col flex-1 min-w-0" style={{ rowGap: '8px' }}>
+        {/* Winners block (top half) */}
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="px-1 shrink-0 mb-0.5 relative z-[2]">
+            <Pill text="Winners Bracket" color={theme.accent} bg={theme.accent + '15'} fontSize={8} paddingX={8} />
+          </div>
+          <div className="relative flex items-stretch gap-0 flex-1 min-h-0" ref={winnersRef}>
+            <BracketConnectors containerRef={winnersRef} rounds={doubleBracket.winnersRounds} theme={theme} bracketStyle={bracketStyle} />
+            {doubleBracket.winnersRounds.map((matches, roundIdx) => (
+              <BracketRound
+                key={`w-${roundIdx}`}
+                matches={matches}
+                roundIndex={roundIdx}
+                totalRounds={doubleBracket.winnersRounds.length}
+                theme={theme}
+                onAdvanceWinner={onAdvanceWinner}
+                bracketSection="winners"
+                label={getRoundLabel(roundIdx, doubleBracket.winnersRounds.length)}
+                sizing={stackedSizing}
+                showSeeds={showSeeds}
+                bracketStyle={bracketStyle}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Losers block (bottom half) */}
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="px-1 shrink-0 mb-0.5 relative z-[2]">
+            <Pill text="Losers Bracket" color={theme.textMuted} bg={theme.textMuted + '15'} fontSize={8} paddingX={8} />
+          </div>
+          <div className="relative flex items-stretch gap-0 flex-1 min-h-0" ref={losersRef}>
+            <BracketConnectors containerRef={losersRef} rounds={doubleBracket.losersRounds} theme={theme} bracketStyle={bracketStyle} />
+            {doubleBracket.losersRounds.map((matches, roundIdx) => (
+              <BracketRound
+                key={`l-${roundIdx}`}
+                matches={matches}
+                roundIndex={roundIdx}
+                totalRounds={doubleBracket.losersRounds.length}
+                theme={theme}
+                onAdvanceWinner={onAdvanceWinner}
+                bracketSection="losers"
+                label={`Losers R${roundIdx + 1}`}
+                sizing={stackedSizing}
+                showSeeds={showSeeds}
+                bracketStyle={bracketStyle}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Grand Finals vertically centered between winners & losers */}
+      <div className="flex items-center shrink-0 ml-6">
+        <BracketRound
+          matches={doubleBracket.grandFinals}
+          roundIndex={0}
+          totalRounds={1}
+          theme={theme}
+          onAdvanceWinner={onAdvanceWinner}
+          bracketSection="grandFinals"
+          label="Grand Finals"
+          sizing={stackedSizing}
+          showSeeds={showSeeds}
+          isChampionship
+          bracketStyle={bracketStyle}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Sideway DE layout: Winners (L→R) | GF center | Losers (R→L mirrored).
+function DoubleBracketSideway({ doubleBracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
   const winnersRef = useRef(null);
   const losersRef = useRef(null);
   const outerRef = useRef(null);
@@ -497,6 +623,13 @@ function DoubleBracket({ doubleBracket, theme, onAdvanceWinner, sizing, showSeed
   );
 }
 
+// Threshold 8: ≤16-team brackets stack cleanly on half-page height; above that
+// the sideway layout preserves legibility by using horizontal space instead.
+function DoubleBracket(props) {
+  const useStacked = props.doubleBracket?.winnersRounds?.[0]?.length <= 8;
+  return useStacked ? <DoubleBracketStacked {...props} /> : <DoubleBracketSideway {...props} />;
+}
+
 export default function BracketView({ bracket, doubleBracket, bracketType, bracketStyle, layout, theme, title, logo, onAdvanceWinner, showSeeds }) {
   // Use effective match count for sizing (skip bye-dominated first rounds)
   const allRounds = bracket?.rounds || doubleBracket?.winnersRounds || [];
@@ -528,7 +661,7 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
         <h2 className="text-[10px] font-bold leading-tight" style={{ color: theme.text }}>
           {title}
         </h2>
-        <div className="ml-auto">
+        <div className="ml-auto" data-export-hide="true">
           <Pill
             text={bracketType === 'single' ? 'Single Elimination' : 'Double Elimination'}
             color={theme.accent}
