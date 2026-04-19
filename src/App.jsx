@@ -18,7 +18,6 @@ function createParticipants(names) {
 
 export default function App() {
   const [title, setTitle] = useState('Tournament Bracket');
-  const [logo, setLogo] = useState(null);
   const [themeName, setThemeName] = useState('bw');
   const [bracketType, setBracketType] = useState('single');
   const [showSeeds, setShowSeeds] = useState(true);
@@ -87,8 +86,6 @@ export default function App() {
       <Header
         title={title}
         setTitle={setTitle}
-        logo={logo}
-        setLogo={setLogo}
         theme={theme}
       />
 
@@ -155,7 +152,6 @@ export default function App() {
                 layout={layout}
                 theme={theme}
                 title={title}
-                logo={logo}
                 onAdvanceWinner={handleAdvanceWinner}
                 showSeeds={showSeeds}
               />
