@@ -1,3 +1,5 @@
+import { useRef, useState, useLayoutEffect } from 'react';
+
 // Shared SVG baseline formula: center + 36% of fontSize ≈ half cap-height offset.
 // html2canvas honors literal SVG y values — this is the only reliable centering approach.
 function svgBaselineY(height, fontSize) { return height / 2 + fontSize * 0.36; }
@@ -172,12 +174,55 @@ function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketStyle, si
 export default function MatchCard({ match, theme, onAdvanceWinner, bracketSection, sizing, showSeeds, isChampionship, bracketStyle }) {
   const { team1, team2, winner, isBye } = match;
   const isLine = bracketStyle === 'line';
+  const containerRef = useRef(null);
+  const [spineData, setSpineData] = useState(null);
 
-  // Proportional to padY so gap scales across the 8 sizing tiers (padY 3..14 maps to gap 3..10).
-  // Floor at 3px so dense 64-match brackets still show separation.
-  // Applied only in boxed mode — line style keeps its original flush layout.
+  // Championship uses a fixed 20px gap for visual emphasis on the champion column.
+  // Regular matches cap at 12px to keep dense 64-team brackets compact while giving
+  // the right-edge spine connector enough vertical span to be visible.
   const padY = sizing?.padY || 8;
-  const slotGap = Math.max(3, Math.round(padY * 0.7));
+  const slotGap = isChampionship
+    ? 20
+    : Math.max(4, Math.min(12, padY));
+
+  // Measures slot centers so the right-edge spine SVG can draw taps at the correct
+  // y-coordinates. Championship also includes the CHAMPS winner singleton (data-champ-winner)
+  // as the first spine point. Re-runs on ResizeObserver for scale changes from AutoScaleWrapper.
+  // Divides measurements by scale because getBoundingClientRect returns transformed (visual)
+  // pixels but SVG internal coordinates are in pre-transform CSS pixels. Mirrors BracketConnectors.
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container || isLine || (isBye && winner)) return;
+
+    const update = () => {
+      const scaleEl = container.closest('[data-auto-scale]');
+      const scale = scaleEl ? parseFloat(scaleEl.dataset.autoScale) || 1 : 1;
+      const cRect = container.getBoundingClientRect();
+      const topSlot = container.querySelector('[data-team-slot="top"]');
+      const bottomSlot = container.querySelector('[data-team-slot="bottom"]');
+      if (!topSlot || !bottomSlot) return;
+
+      const points = [];
+      if (isChampionship) {
+        const champWinner = container.querySelector('[data-champ-winner] [data-team-slot]');
+        if (champWinner) {
+          const wRect = champWinner.getBoundingClientRect();
+          points.push(((wRect.top + wRect.bottom) / 2 - cRect.top) / scale);
+        }
+      }
+      const tRect = topSlot.getBoundingClientRect();
+      const bRect = bottomSlot.getBoundingClientRect();
+      points.push(((tRect.top + tRect.bottom) / 2 - cRect.top) / scale);
+      points.push(((bRect.top + bRect.bottom) / 2 - cRect.top) / scale);
+
+      setSpineData({ points, height: cRect.height / scale });
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [isLine, isBye, winner, isChampionship, padY]);
 
   if (isBye && winner) {
     // Bye slots reserve layout space but render nothing. Any paint-producing
@@ -228,33 +273,45 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
     : sizing;
 
   return (
-    <div className={isChampionship ? 'flex flex-col items-center' : undefined}>
+    <div
+      ref={containerRef}
+      className={isChampionship ? 'flex flex-col items-center' : undefined}
+      style={{ position: 'relative', paddingRight: isLine ? undefined : '10px' }}
+      data-match-id={isChampionship ? undefined : match.id}
+    >
       {isChampionship && (
         <>
-          <div style={{ marginBottom: '4px' }}>
+          <div style={{ marginBottom: '8px' }}>
             <Pill text="🏆 CHAMPS" color={theme.accent} bg={theme.accent + '22'} fontSize={9} paddingX={10} />
           </div>
           {/* CHAMPS winner singleton: width wrapper only; TeamSlot renders its own */}
           {/* accent border + gradient via isChampionship so there's no double-border nesting. */}
-          <div style={{ width: `${champCardW}px` }}>
+          {/* data-champ-winner marks this for the spine SVG's first tap point. */}
+          {/* position="champion" (not "top"/"bottom") so the spine's querySelector */}
+          {/* for data-team-slot="bottom" doesn't accidentally match the winner instead of team2. */}
+          <div style={{ width: `${champCardW}px` }} data-champ-winner>
             <TeamSlot
               team={winner}
               isWinner={!!winner}
               theme={theme}
-              position="bottom"
+              position="champion"
               bracketStyle={bracketStyle}
               sizing={champSizing}
               showSeeds={showSeeds}
               isChampionship={true}
             />
           </div>
-          <div style={{ width: '2px', height: '10px', background: theme.connector }} />
-          <div style={{ marginBottom: '4px' }}>
+          <div style={{ marginTop: '10px', marginBottom: '8px' }}>
             <Pill text="FINALS" color={theme.accent} bg={theme.accent + '22'} fontSize={9} paddingX={10} />
           </div>
         </>
       )}
-      <div style={cardStyle} data-match-id={match.id}>
+      {/* For championship matches, data-match-id sits on the inner cardStyle div so
+          progression connectors (BracketConnectors) aim at the actual FINAL match
+          center, not the outer wrapper center (which would land in the CHAMPS/FINALS
+          pill area above). For regular matches, data-match-id is on the outer wrapper
+          so connector measurements include the spine's paddingRight. */}
+      <div style={cardStyle} data-match-id={isChampionship ? match.id : undefined}>
         <TeamSlot
           team={team1}
           isWinner={winner && winner.id === team1?.id}
@@ -278,6 +335,48 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
           isChampionship={isChampionship}
         />
       </div>
+
+      {/* Right-edge spine connector: vertical line with horizontal taps at each slot center.
+          For championship, spans CHAMPS winner + team1 + team2 (3 points).
+          For regular matches, spans team1 + team2 (2 points).
+          Tap length 8px gives clear visual breathing between box and spine;
+          spine sits at x=8 with paddingRight=10px leaving a 2px margin before connectors.
+          Skipped in line bracketStyle — flush slots have no boxes to connect. */}
+      {!isLine && spineData && spineData.points.length >= 2 && (
+        <svg
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: '10px',
+            height: '100%',
+            overflow: 'visible',
+            pointerEvents: 'none',
+          }}
+        >
+          {spineData.points.map((y, i) => (
+            <line
+              key={i}
+              x1="0"
+              y1={y}
+              x2="8"
+              y2={y}
+              stroke={theme.connector}
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          ))}
+          <line
+            x1="8"
+            y1={spineData.points[0]}
+            x2="8"
+            y2={spineData.points[spineData.points.length - 1]}
+            stroke={theme.connector}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      )}
     </div>
   );
 }

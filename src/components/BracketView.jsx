@@ -387,26 +387,65 @@ function StackedFinalsConnectors({ containerRef, winnersRounds, losersRounds, fi
       };
 
       const finalsEl = container.querySelector(`[data-match-id="${finals[0].id}"]`);
-      if (!finalsEl) return;
+      if (!finalsEl) { setLines([]); return; }
       const finalsRect = finalsEl.getBoundingClientRect();
       const finalsLeftX = (finalsRect.left - containerRect.left) / scale;
       const finalsCenterY = computeMatchY(finalsEl, finalsRect);
 
-      const drawFromSource = (matchEl) => {
-        if (!matchEl) return;
-        const r = matchEl.getBoundingClientRect();
-        const srcX = (r.right - containerRect.left) / scale;
-        const srcY = computeMatchY(matchEl, r);
-        const midX = (srcX + finalsLeftX) / 2;
-        newLines.push({ x1: srcX, y1: srcY, x2: midX, y2: srcY });
-        newLines.push({ x1: midX, y1: srcY, x2: midX, y2: finalsCenterY });
-        newLines.push({ x1: midX, y1: finalsCenterY, x2: finalsLeftX, y2: finalsCenterY });
-      };
-
+      // Collect both sources (winners last + losers last), then draw ONE combined
+      // connector with a shared midX — matches the pattern in FinalsConnectors and
+      // BracketConnectors. Using per-source midX (the old code) produced two parallel
+      // vertical lines when winners-final and losers-final had different right-edge
+      // X positions (normal in most DE brackets).
       const winnersLast = winnersRounds[winnersRounds.length - 1]?.[0];
       const losersLast = losersRounds[losersRounds.length - 1]?.[0];
-      if (winnersLast) drawFromSource(container.querySelector(`[data-match-id="${winnersLast.id}"]`));
-      if (losersLast) drawFromSource(container.querySelector(`[data-match-id="${losersLast.id}"]`));
+      const sources = [];
+      if (winnersLast) {
+        const el = container.querySelector(`[data-match-id="${winnersLast.id}"]`);
+        if (el) {
+          const r = el.getBoundingClientRect();
+          sources.push({
+            x: (r.right - containerRect.left) / scale,
+            y: computeMatchY(el, r),
+          });
+        }
+      }
+      if (losersLast) {
+        const el = container.querySelector(`[data-match-id="${losersLast.id}"]`);
+        if (el) {
+          const r = el.getBoundingClientRect();
+          sources.push({
+            x: (r.right - containerRect.left) / scale,
+            y: computeMatchY(el, r),
+          });
+        }
+      }
+
+      if (sources.length > 0) {
+        // Single shared midX — halfway from the CLOSER source to finals, so the
+        // merge point sits near finals and both horizontals converge cleanly.
+        const closestX = Math.max(...sources.map(s => s.x));
+        if (process.env.NODE_ENV !== 'production' && closestX >= finalsLeftX) {
+          console.warn('[StackedFinalsConnectors] Source right edge at or past finals left — connectors may overlap.');
+        }
+        const midX = (closestX + finalsLeftX) / 2;
+
+        // Horizontal stubs from each source to midX
+        sources.forEach(s => {
+          newLines.push({ x1: s.x, y1: s.y, x2: midX, y2: s.y });
+        });
+        // Vertical spanning all sources at midX
+        if (sources.length === 2) {
+          newLines.push({ x1: midX, y1: sources[0].y, x2: midX, y2: sources[1].y });
+        }
+        // Bridge from midY to finalsCenterY if sources aren't vertically centred on finals
+        const midY = sources.length === 2 ? (sources[0].y + sources[1].y) / 2 : sources[0].y;
+        if (Math.abs(midY - finalsCenterY) > 1) {
+          newLines.push({ x1: midX, y1: midY, x2: midX, y2: finalsCenterY });
+        }
+        // Horizontal from midX to finals left edge
+        newLines.push({ x1: midX, y1: finalsCenterY, x2: finalsLeftX, y2: finalsCenterY });
+      }
 
       setLines(newLines);
     };
@@ -452,11 +491,15 @@ function DoubleBracketStacked({ doubleBracket, theme, onAdvanceWinner, sizing, s
       />
 
       {/* Left area: Winners (top) + Losers (bottom) stacked.
-          overflow:hidden on each block ensures any residual overflow is
-          clipped instead of bleeding into the other bracket's area. */}
+          Each block uses flex:'1 0 auto' — takes its natural content size MINIMUM,
+          then GROWS when AutoScaleWrapper stretches content to fill the letter frame.
+          When stretchH > natural content height, the extra flows to BracketRound's
+          justify-around grid so matches spread out instead of clustering at top.
+          overflow-hidden is a safety net for the rare case where natural content
+          exceeds stretchH (stacked layout used when winnersRounds[0].length ≤ 8). */}
       <div className="flex flex-col flex-1 min-w-0" style={{ rowGap: '8px' }}>
-        {/* Winners block (top half) */}
-        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        {/* Winners block — grows to fill available vertical space */}
+        <div className="flex flex-col min-h-0 overflow-hidden" style={{ flex: '1 0 auto' }}>
           <div className="px-1 shrink-0 mb-0.5 relative z-[2]">
             <Pill text="Winners Bracket" color={theme.accent} bg={theme.accent + '15'} fontSize={8} paddingX={8} />
           </div>
@@ -480,8 +523,8 @@ function DoubleBracketStacked({ doubleBracket, theme, onAdvanceWinner, sizing, s
           </div>
         </div>
 
-        {/* Losers block (bottom half) */}
-        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        {/* Losers block — grows to fill available vertical space */}
+        <div className="flex flex-col min-h-0 overflow-hidden" style={{ flex: '1 0 auto' }}>
           <div className="px-1 shrink-0 mb-0.5 relative z-[2]">
             <Pill text="Losers Bracket" color={theme.textMuted} bg={theme.textMuted + '15'} fontSize={8} paddingX={8} />
           </div>
@@ -623,14 +666,14 @@ function DoubleBracketSideway({ doubleBracket, theme, onAdvanceWinner, sizing, s
   );
 }
 
-// Threshold 8: ≤16-team brackets stack cleanly on half-page height; above that
-// the sideway layout preserves legibility by using horizontal space instead.
+// Stacked when winnersRounds[0].length ≤ 8 first-round matches (typically ≤ 16
+// participants); sideway layout above that for legibility via horizontal space.
 function DoubleBracket(props) {
   const useStacked = props.doubleBracket?.winnersRounds?.[0]?.length <= 8;
   return useStacked ? <DoubleBracketStacked {...props} /> : <DoubleBracketSideway {...props} />;
 }
 
-export default function BracketView({ bracket, doubleBracket, bracketType, bracketStyle, layout, theme, title, logo, onAdvanceWinner, showSeeds }) {
+export default function BracketView({ bracket, doubleBracket, bracketType, bracketStyle, layout, theme, onAdvanceWinner, showSeeds }) {
   // Use effective match count for sizing (skip bye-dominated first rounds)
   const allRounds = bracket?.rounds || doubleBracket?.winnersRounds || [];
   const firstRound = allRounds[0] || [];
@@ -651,31 +694,10 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
         maxWidth: '100%', // shrink width on narrow screens while keeping ratio
       }}
     >
-      <div
-        className="bracket-export-header flex items-center gap-2 px-3 py-1 border-b shrink-0"
-        style={{ borderColor: theme.cardBorder, background: theme.headerBg }}
-      >
-        {logo && (
-          <img src={logo} alt="Logo" className="w-4 h-4 rounded object-cover" />
-        )}
-        <h2 className="text-[10px] font-bold leading-tight" style={{ color: theme.text }}>
-          {title}
-        </h2>
-        <div className="ml-auto" data-export-hide="true">
-          <Pill
-            text={bracketType === 'single' ? 'Single Elimination' : 'Double Elimination'}
-            color={theme.accent}
-            bg={theme.accent + '22'}
-            fontSize={8}
-            paddingX={8}
-          />
-        </div>
-      </div>
-
-      {/* Fills remaining Letter height. overflow-hidden is a second clipping layer;
-          AutoScaleWrapper has its own inner overflow-hidden for scaled content.
-          14px padding keeps bracket content visibly inset from the rounded container edge
-          while letting the header's bottom-border remain edge-to-edge. */}
+      {/* Header removed — title and elimination-type pill were eating ~30px of vertical
+          space that the bracket content needed. Fills the entire Letter-sized frame now.
+          overflow-hidden is a second clipping layer; AutoScaleWrapper has its own inner
+          overflow-hidden for scaled content. */}
       <div className="p-[14px] flex-1 min-h-0 overflow-hidden">
         {/* Key remounts so naturalRef re-measures when bracket shape changes. */}
         <AutoScaleWrapper key={`${bracketType}-${layout}-${allRounds.length}-${effectiveCount}`}>
