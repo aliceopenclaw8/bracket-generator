@@ -227,16 +227,6 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
     ? { ...sizing, padY: Math.max((sizing?.padY || 8) + 6, 14) }
     : sizing;
 
-  const champsBoxStyle = isChampionship
-    ? {
-        width: `${champCardW}px`,
-        border: `2px solid ${theme.accent}`,
-        borderRadius: '8px',
-        background: `linear-gradient(180deg, #fef3c7, #fefce8)`,
-        overflow: 'hidden',
-      }
-    : null;
-
   return (
     <div className={isChampionship ? 'flex flex-col items-center' : undefined}>
       {isChampionship && (
@@ -244,7 +234,9 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
           <div style={{ marginBottom: '4px' }}>
             <Pill text="🏆 CHAMPS" color={theme.accent} bg={theme.accent + '22'} fontSize={9} paddingX={10} />
           </div>
-          <div style={champsBoxStyle}>
+          {/* CHAMPS winner singleton: width wrapper only; TeamSlot renders its own */}
+          {/* accent border + gradient via isChampionship so there's no double-border nesting. */}
+          <div style={{ width: `${champCardW}px` }}>
             <TeamSlot
               team={winner}
               isWinner={!!winner}
@@ -253,6 +245,7 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
               bracketStyle={bracketStyle}
               sizing={champSizing}
               showSeeds={showSeeds}
+              isChampionship={true}
             />
           </div>
           <div style={{ width: '2px', height: '10px', background: theme.connector }} />
