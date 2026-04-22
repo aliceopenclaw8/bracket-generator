@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import BracketRound from './BracketRound';
 import BracketConnectors from './BracketConnectors';
-import { Pill } from './MatchCard';
+import { Pill, TeamSlot } from './MatchCard';
 import { getRoundLabel, splitBracketForDoubleSided } from '../utils/bracketLogic';
 
 function computeBracketSizing(firstRoundMatchCount, layout, bracketType) {
@@ -156,27 +156,31 @@ function AutoScaleWrapper({ children }) {
 
 function SingleBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
   const containerRef = useRef(null);
+  const lastRound = bracket.rounds[bracket.rounds.length - 1] || [];
 
   return (
-    <div className="relative w-full h-full" ref={containerRef}>
-      <BracketConnectors containerRef={containerRef} rounds={bracket.rounds} theme={theme} bracketStyle={bracketStyle} />
-      <div className="flex items-stretch justify-around w-full h-full" style={{ padding: '20px 0' }}>
-        {bracket.rounds.map((matches, roundIdx) => (
-          <BracketRound
-            key={roundIdx}
-            matches={matches}
-            roundIndex={roundIdx}
-            totalRounds={bracket.rounds.length}
-            theme={theme}
-            onAdvanceWinner={onAdvanceWinner}
-            bracketSection="winners"
-            sizing={sizing}
-            showSeeds={showSeeds}
-            isChampionship={roundIdx === bracket.rounds.length - 1 && matches.length === 1}
-            bracketStyle={bracketStyle}
-          />
-        ))}
+    <div className="flex flex-col w-full h-full">
+      <div className="relative w-full flex-1" ref={containerRef}>
+        <BracketConnectors containerRef={containerRef} rounds={bracket.rounds} theme={theme} bracketStyle={bracketStyle} />
+        <div className="flex items-stretch justify-around w-full h-full" style={{ padding: '20px 0' }}>
+          {bracket.rounds.map((matches, roundIdx) => (
+            <BracketRound
+              key={roundIdx}
+              matches={matches}
+              roundIndex={roundIdx}
+              totalRounds={bracket.rounds.length}
+              theme={theme}
+              onAdvanceWinner={onAdvanceWinner}
+              bracketSection="winners"
+              sizing={sizing}
+              showSeeds={showSeeds}
+              isChampionship={roundIdx === bracket.rounds.length - 1 && matches.length === 1}
+              bracketStyle={bracketStyle}
+            />
+          ))}
+        </div>
       </div>
+      {bracketStyle === 'line' && <ChampionFooter finals={lastRound} theme={theme} sizing={sizing} bracketStyle={bracketStyle} />}
     </div>
   );
 }
@@ -279,6 +283,46 @@ function FinalsConnectors({ containerRef, west, east, finals, theme, bracketStyl
   );
 }
 
+// ChampionFooter: horizontally centered champion slot + "CHAMPION" label, rendered
+// BELOW the entire bracket. Line-style only — boxed keeps its original in-column
+// CHAMPS/Champion/FINALS pill stack (scoped in MatchCard). Passing bracketStyle
+// through to TeamSlot is what lets this render as a line in line mode instead of
+// a boxed rectangle that would visually clash with the rest of the line bracket.
+function ChampionFooter({ finals, theme, sizing, bracketStyle }) {
+  const finalMatch = finals?.[0];
+  if (!finalMatch) return null;
+
+  const champSizing = { ...sizing, padY: Math.max((sizing?.padY || 8) + 6, 14) };
+  const champCardW = Math.round((sizing?.cardW || 192) * 1.5);
+
+  return (
+    <div className="flex flex-col items-center shrink-0" style={{ padding: '12px 0 20px' }}>
+      <div style={{ width: `${champCardW}px` }}>
+        <TeamSlot
+          team={finalMatch.winner}
+          isWinner={!!finalMatch.winner}
+          theme={theme}
+          position="champion"
+          bracketStyle={bracketStyle}
+          sizing={champSizing}
+          isChampionship={true}
+        />
+      </div>
+      <span
+        style={{
+          marginTop: '6px',
+          fontSize: '10px',
+          letterSpacing: '0.15em',
+          fontWeight: 600,
+          color: theme.textMuted || theme.text,
+        }}
+      >
+        CHAMPION
+      </span>
+    </div>
+  );
+}
+
 function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
   const { west, east, finals } = splitBracketForDoubleSided(bracket.rounds);
   const westRef = useRef(null);
@@ -286,72 +330,75 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
   const outerRef = useRef(null);
 
   return (
-    <div className="relative flex items-stretch justify-between w-full h-full" style={{ padding: '20px 0' }} ref={outerRef}>
-      <FinalsConnectors containerRef={outerRef} west={west} east={east} finals={finals} theme={theme} bracketStyle={bracketStyle} />
+    <div className="flex flex-col w-full h-full">
+      <div className="relative flex items-stretch justify-between w-full flex-1" style={{ padding: '20px 0' }} ref={outerRef}>
+        <FinalsConnectors containerRef={outerRef} west={west} east={east} finals={finals} theme={theme} bracketStyle={bracketStyle} />
 
-      {/* West side (left to right) — flex:1 so it fills its slice */}
-      <div className="relative flex items-stretch gap-0" ref={westRef} style={{ flex: '1 1 0' }}>
-        <BracketConnectors containerRef={westRef} rounds={west} theme={theme} bracketStyle={bracketStyle} />
-        {west.map((matches, roundIdx) => (
+        {/* West side (left to right) — flex:1 so it fills its slice */}
+        <div className="relative flex items-stretch gap-0" ref={westRef} style={{ flex: '1 1 0' }}>
+          <BracketConnectors containerRef={westRef} rounds={west} theme={theme} bracketStyle={bracketStyle} />
+          {west.map((matches, roundIdx) => (
+            <BracketRound
+              key={`west-${roundIdx}`}
+              matches={matches}
+              roundIndex={roundIdx}
+              totalRounds={west.length}
+              theme={theme}
+              onAdvanceWinner={onAdvanceWinner}
+              bracketSection="winners"
+              label={getRoundLabel(roundIdx, bracket.rounds.length)}
+              sizing={sizing}
+              showSeeds={showSeeds}
+              bracketStyle={bracketStyle}
+            />
+          ))}
+        </div>
+
+        {/* Finals in the center — wrapper mirrors West/East structure (flex items-stretch row)
+            so the BracketRound inside stretches vertically the same way, letting its internal
+            `flex-1 justify-around` align the Finals card at the same Y coordinate as the West/East
+            Semifinal cards. For line style, label={null} suppresses the default "Finals" pill
+            because ChampionFooter renders the champion + CHAMPION label below the bracket. For
+            non-line styles (e.g., boxed), the in-column "Finals" pill is preserved (restores the
+            original main-branch layout where MatchCard renders the 🏆 CHAMPS / FINALS pill stack
+            above the final match). */}
+        <div className="relative flex items-stretch gap-0 mx-4">
           <BracketRound
-            key={`west-${roundIdx}`}
-            matches={matches}
-            roundIndex={roundIdx}
-            totalRounds={west.length}
+            matches={finals}
+            roundIndex={0}
+            totalRounds={1}
             theme={theme}
             onAdvanceWinner={onAdvanceWinner}
             bracketSection="winners"
-            label={getRoundLabel(roundIdx, bracket.rounds.length)}
+            label={bracketStyle === 'line' ? null : 'Finals'}
             sizing={sizing}
             showSeeds={showSeeds}
+            isChampionship
             bracketStyle={bracketStyle}
           />
-        ))}
-      </div>
+        </div>
 
-      {/* Finals in the center — wrapper mirrors West/East structure (flex items-stretch row)
-          so the BracketRound inside stretches vertically the same way, letting its internal
-          `flex-1 justify-around` align the Finals card at the same Y coordinate as the West/East
-          Semifinal cards. Previously this column used `flex flex-col justify-center` plus a
-          decorative "Finals" pill, which (a) duplicated the auto-rendered "Finals" label that
-          BracketRound already generates via getRoundLabel(0, 1) and (b) offset the Finals card
-          vertically relative to the Semifinal cards because the whole block was vertically
-          centered instead of the card. */}
-      <div className="relative flex items-stretch gap-0 mx-4">
-        <BracketRound
-          matches={finals}
-          roundIndex={0}
-          totalRounds={1}
-          theme={theme}
-          onAdvanceWinner={onAdvanceWinner}
-          bracketSection="winners"
-          label="Finals"
-          sizing={sizing}
-          showSeeds={showSeeds}
-          isChampionship
-          bracketStyle={bracketStyle}
-        />
+        {/* East side (right to left, reversed order) */}
+        <div className="relative flex items-stretch gap-0 flex-row-reverse" ref={eastRef} style={{ flex: '1 1 0' }}>
+          <BracketConnectors containerRef={eastRef} rounds={east} theme={theme} mirrored bracketStyle={bracketStyle} />
+          {east.map((matches, roundIdx) => (
+            <BracketRound
+              key={`east-${roundIdx}`}
+              matches={matches}
+              roundIndex={roundIdx}
+              totalRounds={east.length}
+              theme={theme}
+              onAdvanceWinner={onAdvanceWinner}
+              bracketSection="winners"
+              label={getRoundLabel(roundIdx, bracket.rounds.length)}
+              sizing={sizing}
+              showSeeds={showSeeds}
+              bracketStyle={bracketStyle}
+            />
+          ))}
+        </div>
       </div>
-
-      {/* East side (right to left, reversed order) */}
-      <div className="relative flex items-stretch gap-0 flex-row-reverse" ref={eastRef} style={{ flex: '1 1 0' }}>
-        <BracketConnectors containerRef={eastRef} rounds={east} theme={theme} mirrored bracketStyle={bracketStyle} />
-        {east.map((matches, roundIdx) => (
-          <BracketRound
-            key={`east-${roundIdx}`}
-            matches={matches}
-            roundIndex={roundIdx}
-            totalRounds={east.length}
-            theme={theme}
-            onAdvanceWinner={onAdvanceWinner}
-            bracketSection="winners"
-            label={getRoundLabel(roundIdx, bracket.rounds.length)}
-            sizing={sizing}
-            showSeeds={showSeeds}
-            bracketStyle={bracketStyle}
-          />
-        ))}
-      </div>
+      {bracketStyle === 'line' && <ChampionFooter finals={finals} theme={theme} sizing={sizing} bracketStyle={bracketStyle} />}
     </div>
   );
 }
@@ -480,7 +527,8 @@ function DoubleBracketStacked({ doubleBracket, theme, onAdvanceWinner, sizing, s
   };
 
   return (
-    <div className="relative flex w-full h-full py-1" ref={outerRef}>
+    <div className="flex flex-col w-full h-full">
+    <div className="relative flex w-full flex-1 py-1" ref={outerRef}>
       <StackedFinalsConnectors
         containerRef={outerRef}
         winnersRounds={doubleBracket.winnersRounds}
@@ -565,6 +613,8 @@ function DoubleBracketStacked({ doubleBracket, theme, onAdvanceWinner, sizing, s
           bracketStyle={bracketStyle}
         />
       </div>
+    </div>
+    {bracketStyle === 'line' && <ChampionFooter finals={doubleBracket.grandFinals} theme={theme} sizing={sizing} bracketStyle={bracketStyle} />}
     </div>
   );
 }
@@ -662,6 +712,7 @@ function DoubleBracketSideway({ doubleBracket, theme, onAdvanceWinner, sizing, s
           ))}
         </div>
       </div>
+      {bracketStyle === 'line' && <ChampionFooter finals={doubleBracket.grandFinals} theme={theme} sizing={sizing} bracketStyle={bracketStyle} />}
     </div>
   );
 }
