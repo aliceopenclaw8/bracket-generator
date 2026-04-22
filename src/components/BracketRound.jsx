@@ -22,7 +22,11 @@ export default function BracketRound({
     // minWidth preserves legibility at small counts; flex-grow absorbs extra space.
     <div className="flex flex-col items-center" style={{ minWidth: `${roundW}px`, flex: '1 1 0' }}>
       {roundLabel && <Pill text={roundLabel} color={theme.roundLabel} bg={theme.roundLabel + '15'} fontSize={8} paddingX={8} marginBottom={6} />}
-      <div className="flex flex-col justify-around flex-1">
+      {/* rowGap = inter-match gap; identical baseGap across rounds keeps connector Y-alignment. */}
+      <div
+        className="flex flex-col justify-around flex-1"
+        style={{ rowGap: `${sizing?.baseGap ?? 0}px` }}
+      >
         {matches.map((match) => (
           <MatchCard
             key={match.id}
