@@ -77,7 +77,7 @@ function Pill({ text, color, bg, fontSize = 11, paddingX = 14, marginBottom = 0 
 
 export { Pill };
 
-function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketStyle, sizing, showSeeds, isChampionship }) {
+export function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketStyle, sizing, showSeeds, isChampionship }) {
   const isEmpty = !team;
   const displayName = team?.name || '';
   const isLine = bracketStyle === 'line';
@@ -271,7 +271,7 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
       style={{ position: 'relative', paddingRight: isLine ? undefined : '10px' }}
       data-match-id={isChampionship ? undefined : match.id}
     >
-      {isChampionship && (
+      {isChampionship && bracketStyle !== 'line' && (
         <>
           <div style={{ marginBottom: '8px' }}>
             <Pill text="🏆 CHAMPS" color={theme.accent} bg={theme.accent + '22'} fontSize={9} paddingX={10} />
