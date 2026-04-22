@@ -111,12 +111,8 @@ function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketStyle, si
         paddingBottom: `${padY + 8}px`,
         // Each slot is now a fully self-contained card (full border, all corners rounded)
         // so the parent wrapper can space them with a gap between the two boxes.
-        // Championship slots use the accent gradient + 4px accent border individually
-        // because the outer wrapper no longer carries the championship styling (the gap
-        // would expose the outer gradient between the two slots otherwise).
-        background: isChampionship
-          ? 'linear-gradient(180deg, #fef3c7, #fefce8)'
-          : (isWinner ? theme.winnerBg : theme.cardBg),
+        // No fill color on championship slots — emphasis is the 4px accent border alone.
+        background: isWinner ? theme.winnerBg : theme.cardBg,
         border: `${isChampionship ? 4 : 1}px solid ${isChampionship ? theme.accent : theme.cardBorder}`,
         borderRadius: '8px',
       };
@@ -285,8 +281,9 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
             <Pill text="🏆 CHAMPS" color={theme.accent} bg={theme.accent + '22'} fontSize={9} paddingX={10} />
           </div>
           {/* CHAMPS winner singleton: width wrapper only; TeamSlot renders its own */}
-          {/* accent border + gradient via isChampionship so there's no double-border nesting. */}
-          {/* data-champ-winner marks this for the spine SVG's first tap point. */}
+          {/* 4px accent border via isChampionship (no fill color — same emphasis */}
+          {/* pattern as FINALS slots). data-champ-winner marks this for the spine */}
+          {/* SVG's first tap point. */}
           {/* position="champion" (not "top"/"bottom") so the spine's querySelector */}
           {/* for data-team-slot="bottom" doesn't accidentally match the winner instead of team2. */}
           <div style={{ width: `${champCardW}px` }} data-champ-winner>
