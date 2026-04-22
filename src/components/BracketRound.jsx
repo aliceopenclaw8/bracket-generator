@@ -14,14 +14,14 @@ export default function BracketRound({
   isChampionship,
   bracketStyle,
 }) {
-  const roundLabel = label || getRoundLabel(roundIndex, totalRounds);
+  const roundLabel = label !== undefined ? label : getRoundLabel(roundIndex, totalRounds);
   const roundW = sizing?.roundW || 224;
 
   return (
     // flex:1 so rounds grow to fill the stretched parent width instead of leaving gaps.
     // minWidth preserves legibility at small counts; flex-grow absorbs extra space.
     <div className="flex flex-col items-center" style={{ minWidth: `${roundW}px`, flex: '1 1 0' }}>
-      <Pill text={roundLabel} color={theme.roundLabel} bg={theme.roundLabel + '15'} fontSize={8} paddingX={8} marginBottom={6} />
+      {roundLabel && <Pill text={roundLabel} color={theme.roundLabel} bg={theme.roundLabel + '15'} fontSize={8} paddingX={8} marginBottom={6} />}
       <div className="flex flex-col justify-around flex-1">
         {matches.map((match) => (
           <MatchCard
