@@ -558,7 +558,7 @@ function DoubleBracketStacked({ doubleBracket, theme, onAdvanceWinner, sizing, s
           theme={theme}
           onAdvanceWinner={onAdvanceWinner}
           bracketSection="grandFinals"
-          label="Grand Finals"
+          label={null}
           sizing={stackedSizing}
           showSeeds={showSeeds}
           isChampionship
@@ -634,7 +634,7 @@ function DoubleBracketSideway({ doubleBracket, theme, onAdvanceWinner, sizing, s
             theme={theme}
             onAdvanceWinner={onAdvanceWinner}
             bracketSection="grandFinals"
-            label="Grand Finals"
+            label={null}
             sizing={sizing}
             showSeeds={showSeeds}
             isChampionship
