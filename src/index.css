@@ -1,12 +1,99 @@
-@import "tailwindcss";
+/* Tailwind v4 — scoped preflight + utilities.
+ *
+ * Default `@import "tailwindcss"` would emit base-layer resets (preflight) at
+ * global scope, smashing WP theme styling for h1/h2/button/a/etc. We import
+ * theme + utilities normally, then manually re-implement preflight ONLY inside
+ * #bracket-root and .bracket-generator-mount (multi-instance support).
+ */
+@layer theme, base, components, utilities;
 
-html, body, #root {
-  height: 100%;
-  margin: 0;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@layer base {
+  #bracket-root,
+  #bracket-root *,
+  #bracket-root *::before,
+  #bracket-root *::after,
+  .bracket-generator-mount,
+  .bracket-generator-mount *,
+  .bracket-generator-mount *::before,
+  .bracket-generator-mount *::after {
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: currentColor;
+  }
+
+  #bracket-root,
+  .bracket-generator-mount {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    -moz-tab-size: 4;
+    tab-size: 4;
+    font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    font-feature-settings: normal;
+    font-variation-settings: normal;
+  }
+
+  #bracket-root h1, #bracket-root h2, #bracket-root h3, #bracket-root h4, #bracket-root h5, #bracket-root h6,
+  .bracket-generator-mount h1, .bracket-generator-mount h2, .bracket-generator-mount h3, .bracket-generator-mount h4, .bracket-generator-mount h5, .bracket-generator-mount h6 {
+    font-size: inherit;
+    font-weight: inherit;
+    margin: 0;
+  }
+
+  #bracket-root p, #bracket-root blockquote, #bracket-root pre, #bracket-root figure,
+  .bracket-generator-mount p, .bracket-generator-mount blockquote, .bracket-generator-mount pre, .bracket-generator-mount figure {
+    margin: 0;
+  }
+
+  #bracket-root ol, #bracket-root ul, #bracket-root menu,
+  .bracket-generator-mount ol, .bracket-generator-mount ul, .bracket-generator-mount menu {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  #bracket-root a,
+  .bracket-generator-mount a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  #bracket-root button, #bracket-root input, #bracket-root optgroup, #bracket-root select, #bracket-root textarea,
+  .bracket-generator-mount button, .bracket-generator-mount input, .bracket-generator-mount optgroup, .bracket-generator-mount select, .bracket-generator-mount textarea {
+    font-family: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    font-size: 100%;
+    font-weight: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    margin: 0;
+    padding: 0;
+  }
+
+  #bracket-root button, #bracket-root [type="button"], #bracket-root [type="reset"], #bracket-root [type="submit"],
+  .bracket-generator-mount button, .bracket-generator-mount [type="button"], .bracket-generator-mount [type="reset"], .bracket-generator-mount [type="submit"] {
+    background-color: transparent;
+    background-image: none;
+    cursor: pointer;
+  }
+
+  #bracket-root img, #bracket-root svg, #bracket-root video, #bracket-root canvas, #bracket-root audio, #bracket-root iframe, #bracket-root embed, #bracket-root object,
+  .bracket-generator-mount img, .bracket-generator-mount svg, .bracket-generator-mount video, .bracket-generator-mount canvas, .bracket-generator-mount audio, .bracket-generator-mount iframe, .bracket-generator-mount embed, .bracket-generator-mount object {
+    display: block;
+    vertical-align: middle;
+    max-width: 100%;
+    height: auto;
+  }
 }
 
-* {
-  box-sizing: border-box;
+html, body, #bracket-root {
+  height: 100%;
+  margin: 0;
 }
 
 @page {
@@ -15,12 +102,11 @@ html, body, #root {
 }
 
 @media print {
-  html, body, #root {
+  html, body, #bracket-root, .bracket-generator-mount {
     background: white !important;
     color: black !important;
   }
 
-  /* Override inline theme background for consistent print output */
   .bracket-container {
     background: white !important;
     color: black !important;
