@@ -16,17 +16,50 @@
   <h1>Fake WP Theme Page</h1>
   <p>This paragraph and the surrounding <a href="#">links</a>, <button>buttons</button>, and headings should retain their WP-theme styling AFTER the bracket-generator bundle loads. If they reset to Tailwind defaults (browser sans-serif, no underline on links, no button background), preflight isolation has failed.</p>
 
-  <h2>Section before bracket</h2>
+  <h2>Section before brackets</h2>
   <p>More content with a <a href="#">styled link</a>.</p>
 
-  <!-- Bracket mount -->
-  <div id="bracket-root" class="bracket-generator-mount" data-theme="bw"></div>
+  <!-- First bracket mount -->
+  <div class="bracket-generator-wrapper">
+    <div id="bracket-root-1" class="bracket-generator-mount" data-theme="printerfriend"></div>
+  </div>
 
-  <h2>Section after bracket</h2>
-  <p>Same styling expectations: link should still be red and underlined, button should still be blue.</p>
-  <p><a href="#">After-link</a> and <button>After-button</button>.</p>
+  <h2>Some content between brackets</h2>
+  <p>This text should retain WP-theme styling: <a href="#">link still red</a> and <button>button still blue</button>.</p>
 
-  <!-- Load the built plugin bundle. After Task 7+ this path is stable. -->
+  <!-- Second bracket mount -->
+  <div class="bracket-generator-wrapper">
+    <div id="bracket-root-2" class="bracket-generator-mount" data-theme="interbasket"></div>
+  </div>
+
+  <h2>Section after brackets</h2>
+  <p>Same styling expectations: <a href="#">After-link</a> and <button>After-button</button>.</p>
+
+  <!-- Load the built plugin bundle. -->
   <script type="module" src="../wp-plugin/bracket-generator/dist/bracket-generator.js"></script>
+  <script>
+    // Manually mount both instances (the auto-mount in main.jsx only fires
+    // for #bracket-root singular, so multi-instance pages emulate the WP
+    // plugin's behavior of explicit mount calls per shortcode).
+    document.addEventListener('DOMContentLoaded', function() {
+      function attempt(retries) {
+        if (window.BracketGenerator && window.BracketGenerator.mount) {
+          var el1 = document.getElementById('bracket-root-1');
+          var el2 = document.getElementById('bracket-root-2');
+          if (el1 && !el1.dataset.mounted) {
+            el1.dataset.mounted = '1';
+            window.BracketGenerator.mount(el1);
+          }
+          if (el2 && !el2.dataset.mounted) {
+            el2.dataset.mounted = '1';
+            window.BracketGenerator.mount(el2);
+          }
+          return;
+        }
+        if (retries > 0) setTimeout(function() { attempt(retries - 1); }, 50);
+      }
+      attempt(100);
+    });
+  </script>
 </body>
 </html>
