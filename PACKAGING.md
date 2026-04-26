@@ -129,11 +129,29 @@ Stuart asked if we recommend switching hosts — answer was no, hosting.com is f
 | WP theme | MesoColumn |
 | Vibe | utilitarian, casual, content-library feel |
 
-### interbasket.net — TBD (Cloudflare blocked the search agent)
+### interbasket.net — VERIFIED via Puppeteer-authenticated capture
 
-The search-specialist subagent could not directly inspect interbasket.net's CSS because the site is Cloudflare-protected. The agent inferred (from Google search snippets, NOT direct verification) that interbasket might be a phpBB forum. **This is unverified speculation.** Stuart explicitly said both sites are WP+Yoast+Classic Editor and provided WP admin credentials, which is strong counter-evidence.
+| Token | Value |
+|---|---|
+| Body background | `rgb(251, 251, 251)` (off-white `#FBFBFB`) |
+| Body text color | `rgb(37, 35, 36)` (near-black `#252324`) |
+| Body font | `"Times New Roman", Times, Baskerville, Georgia, serif` |
+| Heading color | `rgb(34, 34, 34)` (`#222222`) |
+| Heading font | `Merriweather, serif` (weight 700) |
+| Brand accent (navy) | `rgb(9, 57, 105)` (`#093969`) — captured as button text color, also used as nav background based on screenshot |
+| Button background | `rgb(255, 255, 255)` (white) |
+| Button text | `rgb(9, 57, 105)` (navy) |
+| Border radius | `2px` (very subtle) |
+| Nav text | `rgba(255, 255, 255, 0.8)` (white at 80% opacity, on navy bar) |
+| WP platform | confirmed (`wpAdminConfirmed: true`, body classes include `wp-theme-tribune`) |
+| WP theme | Tribune (newspaper/magazine theme) |
+| Page builder signal | Elementor (`elementor-default elementor-kit-34619` body classes) |
+| Generator meta | "Site Kit by Google 1.172.0" (WP-version meta is stripped by theme; not a phpBB signal) |
+| Vibe | Editorial sports-magazine aesthetic — NYT-style serif wordmark, navy + white palette, two-column layout, professional NBA-journalism feel. Already has a "BRACKETS" nav item — bracket generator will live under that section. |
 
-**Plan during build phase:** use `.env.local` credentials with Puppeteer (already a dev dep) to log into interbasket WP admin, capture theme/colors/fonts/plugin list, AND empirically confirm WP platform. If interbasket turns out hybrid (WP + phpBB co-existing), get WP path from Stuart. If pure phpBB (extremely unlikely given his answers), pivot to Path B fallback.
+Captured: 2026-04-26 via `npm run capture:brand` (Puppeteer headful + manual Cloudflare passthrough). Raw JSON: `scripts/brand-capture/interbasket-tokens.json`. Screenshot: `scripts/brand-capture/interbasket-home.png`.
+
+**phpBB risk RESOLVED:** the prior search-specialist's phpBB speculation was wrong. interbasket.net is WordPress + Tribune theme + Elementor + Site Kit. The site does have a "FORUM" link in its main nav (likely a separate phpBB or bbPress install on a subpath), but the homepage and `/bracket-generator/` URL Stuart confirmed both run on WP — the plugin path is safe.
 
 ## Credentials
 

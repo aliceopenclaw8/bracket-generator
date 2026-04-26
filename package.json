@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "verify": "node scripts/verify-brackets.js"
+    "verify": "node scripts/verify-brackets.js",
+    "capture:brand": "node scripts/capture-interbasket-brand.js"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
