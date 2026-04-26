@@ -16,9 +16,9 @@ function createParticipants(names) {
   return names.map((name, i) => ({ id: `p-${i}`, name, seed: i + 1 }));
 }
 
-export default function App() {
+export default function App({ initialTheme = 'bw', feedbackUrl = null }) {
   const [title, setTitle] = useState('Tournament Bracket');
-  const [themeName, setThemeName] = useState('bw');
+  const [themeName, setThemeName] = useState(initialTheme);
   const [bracketType, setBracketType] = useState('single');
   const [showSeeds, setShowSeeds] = useState(true);
   const [printMargin, setPrintMargin] = useState(0);
