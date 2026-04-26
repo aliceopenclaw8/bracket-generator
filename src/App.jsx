@@ -159,6 +159,19 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null }) {
           </>
         )}
       </div>
+      {feedbackUrl && (
+        <footer
+          className="no-print text-center py-4 text-sm"
+          style={{ color: theme.textMuted, borderTop: `1px solid ${theme.cardBorder}` }}
+        >
+          <a
+            href={feedbackUrl}
+            style={{ color: theme.accent, textDecoration: 'underline' }}
+          >
+            Provide feedback
+          </a>
+        </footer>
+      )}
     </div>
   );
 }
