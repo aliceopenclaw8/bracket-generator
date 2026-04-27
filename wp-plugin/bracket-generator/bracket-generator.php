@@ -16,6 +16,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// class_exists guard — prevents fatal "Cannot redeclare" if WP loads this
+// file twice (caching plugins, must-use loaders, MultiSite edge cases).
+if (!class_exists('Bracket_Generator_Plugin')) {
+
 class Bracket_Generator_Plugin {
     /** @var int Counter for unique mount IDs across multiple shortcodes per page */
     private static $instance_count = 0;
@@ -88,6 +92,19 @@ class Bracket_Generator_Plugin {
                     }
                     if (++attempts > 100) {
                         console.error('BracketGenerator failed to load after 5s');
+                        var failEl = document.getElementById(id);
+                        if (failEl) {
+                            // Build the fallback DOM using safe APIs (textContent + style props),
+                            // not innerHTML, to satisfy strict CSP / XSS-lint policies. Content is
+                            // entirely static, but textContent keeps that fact obvious to auditors.
+                            while (failEl.firstChild) { failEl.removeChild(failEl.firstChild); }
+                            var failMsg = document.createElement('p');
+                            failMsg.style.textAlign = 'center';
+                            failMsg.style.padding = '2rem';
+                            failMsg.style.color = '#666';
+                            failMsg.textContent = 'The bracket tool failed to load. Please refresh the page.';
+                            failEl.appendChild(failMsg);
+                        }
                         return;
                     }
                     setTimeout(tryMount, 50);
@@ -138,3 +155,5 @@ class Bracket_Generator_Plugin {
 }
 
 new Bracket_Generator_Plugin();
+
+}
