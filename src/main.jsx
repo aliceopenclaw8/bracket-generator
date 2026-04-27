@@ -4,6 +4,43 @@ import './index.css';
 import App from './App.jsx';
 
 /**
+ * Render-time crash backstop. If any descendant throws (e.g., html2canvas
+ * blowup during export, malformed bracket state, drag-drop edge case),
+ * React would otherwise unmount the whole tree and leave a blank container
+ * with no signal of what failed. Class component because hooks can't
+ * implement getDerivedStateFromError / componentDidCatch.
+ */
+class BracketGeneratorErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('BracketGenerator crashed:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ textAlign: 'center', padding: '2rem', color: '#666', fontFamily: 'system-ui, sans-serif' }}>
+          <p>Something went wrong with the bracket tool.</p>
+          {this.props.feedbackUrl && (
+            <p>
+              <a href={this.props.feedbackUrl} style={{ color: '#666', textDecoration: 'underline' }}>
+                Report this issue
+              </a>
+            </p>
+          )}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/**
  * Mount the bracket generator into a given container.
  *
  * @param {HTMLElement} container - The DOM element to mount into.
@@ -25,7 +62,9 @@ export function mount(container, options = {}) {
   const root = createRoot(container);
   root.render(
     <React.StrictMode>
-      <App initialTheme={theme} feedbackUrl={feedbackUrl} />
+      <BracketGeneratorErrorBoundary feedbackUrl={feedbackUrl}>
+        <App initialTheme={theme} feedbackUrl={feedbackUrl} />
+      </BracketGeneratorErrorBoundary>
     </React.StrictMode>
   );
   return root;
@@ -33,7 +72,7 @@ export function mount(container, options = {}) {
 
 // Expose globally for the WP plugin's inline script to call.
 if (typeof window !== 'undefined') {
-  window.BracketGenerator = { mount };
+  window.BracketGenerator = { version: '1.0.0', mount };
 }
 
 // Dev auto-mount: if a #bracket-root exists on page load and isn't already
