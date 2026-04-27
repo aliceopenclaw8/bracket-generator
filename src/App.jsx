@@ -31,7 +31,7 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null }) {
   const [isGenerated, setIsGenerated] = useState(false);
   const bracketRef = useRef(null);
 
-  const theme = THEMES[themeName];
+  const theme = THEMES[themeName] || THEMES.bw;
 
   const handleGenerate = useCallback(() => {
     let participants;
