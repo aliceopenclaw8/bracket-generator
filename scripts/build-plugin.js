@@ -49,9 +49,21 @@ await new Promise((resolve, reject) => {
   archive.on('error', reject);
 
   archive.pipe(output);
-  // The zip's top-level folder must be 'bracket-generator/' so WP plugin uploader
-  // extracts it correctly. archiver's `directory(src, destInZip)` handles this.
-  archive.directory(PLUGIN_DIR, 'bracket-generator');
+  // Explicit allowlist of plugin files. Prevents accidental shipping of
+  // .env, debug notes, .DS_Store, or any other stray file in the plugin
+  // folder. Add new entries here if the plugin grows additional files.
+  archive.file(path.join(PLUGIN_DIR, 'bracket-generator.php'), {
+    name: 'bracket-generator/bracket-generator.php',
+  });
+  archive.file(path.join(PLUGIN_DIR, 'INSTALL.md'), {
+    name: 'bracket-generator/INSTALL.md',
+  });
+  // dist/ is the build output — entire directory ships, but archiver's
+  // glob-based exclusion catches stray non-build files (.DS_Store, etc.)
+  archive.glob('**/*', {
+    cwd: path.join(PLUGIN_DIR, 'dist'),
+    ignore: ['.DS_Store', '*.log', '.env*', '*.local'],
+  }, { prefix: 'bracket-generator/dist' });
   archive.finalize();
 });
 
