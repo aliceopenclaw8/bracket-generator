@@ -91,28 +91,32 @@
   }
 }
 
-html, body, #bracket-root {
-  height: 100%;
+/* Bracket-only screen layout. App.jsx's outer div sets minHeight: 100vh,
+ * so we don't need to reach into html/body/document — those belong to
+ * the host page. */
+#bracket-root,
+.bracket-generator-mount {
   margin: 0;
 }
 
-@page {
-  size: letter landscape;
-  margin: 1in;
-}
-
+/* Bracket print rules — scoped to the bracket DOM tree only. The export
+ * pipeline uses html2canvas + jsPDF, not browser print, so the previously
+ * global @page rule was unused and is dropped. */
 @media print {
-  html, body, #bracket-root, .bracket-generator-mount {
+  #bracket-root,
+  .bracket-generator-mount,
+  #bracket-root .bracket-container,
+  .bracket-generator-mount .bracket-container {
     background: white !important;
     color: black !important;
   }
 
-  .bracket-container {
-    background: white !important;
-    color: black !important;
-  }
-
-  header, button, .no-print {
+  #bracket-root header,
+  .bracket-generator-mount header,
+  #bracket-root button,
+  .bracket-generator-mount button,
+  #bracket-root .no-print,
+  .bracket-generator-mount .no-print {
     display: none !important;
   }
 }
