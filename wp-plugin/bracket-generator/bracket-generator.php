@@ -143,11 +143,18 @@ class Bracket_Generator_Plugin {
     }
 
     /**
-     * Vite outputs ES modules. WP's wp_enqueue_script doesn't add type="module"
-     * by default — we filter the script tag for our handle.
+     * Vite outputs ES modules. WP emits <script type="text/javascript" src="...">
+     * by default — naive insertion of `type="module"` produces two `type`
+     * attributes, and the browser uses the first one (text/javascript), which
+     * causes `import.meta` and other ESM-only syntax to throw SyntaxError.
+     *
+     * Strip any existing type attribute first via regex, then add type="module".
+     * Handles both the WP-emitted `type="text/javascript"` form and a future
+     * type-less form.
      */
     public function add_module_type($tag, $handle) {
         if ($handle === 'bracket-generator') {
+            $tag = preg_replace('/\stype=([\'"])[^\'"]*\1/', '', $tag);
             return str_replace(' src=', ' type="module" src=', $tag);
         }
         return $tag;
