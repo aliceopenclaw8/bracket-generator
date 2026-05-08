@@ -91,7 +91,7 @@ export default function SetupPanel({
     <div className="max-w-2xl mx-auto py-8">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold mb-2" style={{ color: theme.text }}>
-          Setup Your Tournament
+          Create Your Bracket
         </h2>
         <p style={{ color: theme.textMuted }}>
           Add participants, choose bracket type, and customize the look

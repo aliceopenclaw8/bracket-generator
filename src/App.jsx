@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { generateSingleElimination, generateDoubleElimination, advanceWinner } from './utils/bracketLogic';
 import { THEMES } from './utils/themes';
-import Header from './components/Header';
 import SetupPanel from './components/SetupPanel';
 import BracketView from './components/BracketView';
 import ExportButtons from './components/ExportButtons';
@@ -83,12 +82,6 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null }) {
   return (
     <div style={{ background: theme.bg, color: theme.text, minHeight: '100vh' }}
          className="transition-colors duration-300">
-      <Header
-        title={title}
-        setTitle={setTitle}
-        theme={theme}
-      />
-
       <div className="max-w-screen-2xl mx-auto px-4 pb-12">
         {!isGenerated ? (
           <SetupPanel
