@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { generateSingleElimination, generateDoubleElimination, advanceWinner } from './utils/bracketLogic';
 import { THEMES } from './utils/themes';
 import SetupPanel from './components/SetupPanel';
@@ -35,6 +35,15 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null, adMidHtml
   const bracketRef = useRef(null);
 
   const theme = THEMES[themeName] || THEMES.bw;
+
+  // Auto-scroll the bracket into view when it's freshly generated. WP-page
+  // context: the tool sits mid-page below SEO copy; without this, users land
+  // at the toolbar and have to scroll to see the bracket.
+  useEffect(() => {
+    if (isGenerated && bracketRef.current) {
+      bracketRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [isGenerated]);
 
   const handleGenerate = useCallback(() => {
     let participants;
