@@ -47,6 +47,7 @@ class BracketGeneratorErrorBoundary extends React.Component {
  * @param {Object} [options] - Optional overrides.
  * @param {string} [options.theme] - Theme name. Falls back to container.dataset.theme.
  * @param {string} [options.feedbackUrl] - Feedback link URL. Falls back to container.dataset.feedbackUrl.
+ * @param {string} [options.adMidHtml] - Pre-rendered AdSense HTML for the mid slot. Falls back to container.dataset.adsMidHtml.
  * @returns {import('react-dom/client').Root} The React root, in case the caller needs to unmount later.
  */
 export function mount(container, options = {}) {
@@ -58,12 +59,17 @@ export function mount(container, options = {}) {
     options.feedbackUrl ||
     container.dataset.feedbackUrl ||
     'mailto:interbasketmedia@gmail.com?subject=Bracket%20Generator%20problem';
+  // Pre-rendered AdSense markup baked into a data attribute by the WP plugin
+  // (esc_attr-encoded server-side, browser auto-decodes on dataset read). Null
+  // when "mid" is not in the shortcode's ads="..." list — AdSlot then renders
+  // nothing, costing zero DOM nodes.
+  const adMidHtml = options.adMidHtml || container.dataset.adsMidHtml || null;
 
   const root = createRoot(container);
   root.render(
     <React.StrictMode>
       <BracketGeneratorErrorBoundary feedbackUrl={feedbackUrl}>
-        <App initialTheme={theme} feedbackUrl={feedbackUrl} />
+        <App initialTheme={theme} feedbackUrl={feedbackUrl} adMidHtml={adMidHtml} />
       </BracketGeneratorErrorBoundary>
     </React.StrictMode>
   );

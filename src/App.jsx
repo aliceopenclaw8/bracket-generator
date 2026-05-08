@@ -5,6 +5,7 @@ import SetupPanel from './components/SetupPanel';
 import BracketView from './components/BracketView';
 import ExportButtons from './components/ExportButtons';
 import ThemePicker from './components/ThemePicker';
+import AdSlot from './components/AdSlot';
 
 const DEFAULT_PARTICIPANTS = [
   'Team 1', 'Team 2', 'Team 3', 'Team 4',
@@ -15,8 +16,11 @@ function createParticipants(names) {
   return names.map((name, i) => ({ id: `p-${i}`, name, seed: i + 1 }));
 }
 
-export default function App({ initialTheme = 'bw', feedbackUrl = null }) {
-  const [title, setTitle] = useState('Tournament Bracket');
+export default function App({ initialTheme = 'bw', feedbackUrl = null, adMidHtml = null }) {
+  // Title is the export filename — currently a constant since the editable
+  // <Header> was removed in the client-feedback round. Keep it as state to
+  // make a future re-introduction (or per-bracket naming) a one-line change.
+  const [title] = useState('Tournament Bracket');
   const [themeName, setThemeName] = useState(initialTheme);
   const [bracketType, setBracketType] = useState('single');
   const [showSeeds, setShowSeeds] = useState(true);
@@ -103,6 +107,7 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null }) {
             theme={theme}
             themeName={themeName}
             setThemeName={setThemeName}
+            adMidHtml={adMidHtml}
           />
         ) : (
           <>
