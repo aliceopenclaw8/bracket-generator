@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ThemePicker from './ThemePicker';
+import AdSlot from './AdSlot';
 import { shuffleArray } from '../utils/shuffle';
 
 export default function SetupPanel({
@@ -22,6 +23,7 @@ export default function SetupPanel({
   theme,
   themeName,
   setThemeName,
+  adMidHtml,
 }) {
   const validCount = participantNames.filter(n => n.trim()).length;
 
@@ -282,6 +284,9 @@ export default function SetupPanel({
           <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{customCountError}</p>
         )}
       </div>
+
+      {/* Mid ad slot (above Participants) */}
+      <AdSlot html={adMidHtml} position="mid" />
 
       {/* Participants Section */}
       <div className="mb-5">

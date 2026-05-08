@@ -57,6 +57,14 @@ class Bracket_Generator_Plugin {
         $ad_positions = array_map('trim', explode(',', $atts['ads']));
         $show_top    = in_array('top', $ad_positions, true);
         $show_bottom = in_array('bottom', $ad_positions, true);
+        // Mid slot is rendered inside the React tree (not in this PHP wrapper)
+        // because its position depends on app state (above Participants in setup
+        // view, above Export buttons in result view). We pre-resolve [gard] here
+        // so the React component receives final HTML, then stash it on a data
+        // attribute. esc_attr() handles the round-trip — quotes, newlines, and
+        // <script> bodies all survive; the browser auto-decodes on dataset read.
+        $show_mid    = in_array('mid', $ad_positions, true);
+        $mid_html    = $show_mid ? do_shortcode('[gard]') : '';
 
         ob_start();
         ?>
@@ -69,7 +77,8 @@ class Bracket_Generator_Plugin {
 
             <div id="<?php echo esc_attr($instance_id); ?>"
                  class="bracket-generator-mount"
-                 data-theme="<?php echo esc_attr($atts['theme']); ?>"></div>
+                 data-theme="<?php echo esc_attr($atts['theme']); ?>"
+                 data-ads-mid-html="<?php echo esc_attr($mid_html); ?>"></div>
 
             <?php if ($show_bottom): ?>
                 <div class="bracket-ad bracket-ad-bottom">
