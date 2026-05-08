@@ -34,6 +34,11 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
   // users assumed the export was broken during the 30s-4min delay and
   // clicked again, queueing duplicate exports and worsening the hang.
   const [exporting, setExporting] = useState(null); // null | 'png' | 'pdf'
+  // User-visible error message shown inline below the buttons. Replaces
+  // the prior blocking alert() which looked like the whole WP page broke,
+  // not just the embedded tool. role="alert" on the rendered node lets
+  // screen readers announce the failure.
+  const [exportError, setExportError] = useState(null);
 
   // WYSIWYG: capture bracketRef exactly as rendered. Never mutate the live DOM
   // before capture — hiding the header or changing sizes triggers
@@ -47,8 +52,16 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
   };
 
   const handlePNG = async () => {
+    setExportError(null);
     setExporting('png');
     try {
+      // Wait for any pending @font-face / Google Fonts to resolve before
+      // rasterization. html-to-image silently swallows webfont fetch errors
+      // (see node_modules/html-to-image/es/embed-resources.js — empty catch),
+      // so without this gate, exports can render with fallback fonts and zero
+      // error signal. document.fonts.ready resolves once all currently-pending
+      // FontFaceSet loads complete.
+      await document.fonts.ready;
       // Capture .bracket-container directly, not the wrapper — wrapper includes
       // mx-auto gutters which break Letter aspect and cause letterboxing in export.
       const target = bracketRef.current?.querySelector('.bracket-container');
@@ -81,15 +94,33 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       link.click();
     } catch (err) {
       console.error('PNG export failed:', err);
-      alert(`Failed to export as PNG: ${err.message || 'Unknown error'}. Please try again.`);
+      let userMsg;
+      if (err.message?.includes('tainted')) {
+        userMsg = 'Export blocked by browser security (cross-origin image issue). Try a different theme.';
+      } else if (err.message?.includes('Bracket not ready')) {
+        userMsg = 'Bracket is not fully rendered yet — wait a moment and try again.';
+      } else if (err.message?.includes('empty')) {
+        userMsg = 'The bracket appears empty. Try regenerating it before exporting.';
+      } else {
+        userMsg = `Export failed: ${err.message || 'Unknown error'}. Please try again.`;
+      }
+      setExportError(userMsg);
     } finally {
       setExporting(null);
     }
   };
 
   const handlePDF = async () => {
+    setExportError(null);
     setExporting('pdf');
     try {
+      // Wait for any pending @font-face / Google Fonts to resolve before
+      // rasterization. html-to-image silently swallows webfont fetch errors
+      // (see node_modules/html-to-image/es/embed-resources.js — empty catch),
+      // so without this gate, exports can render with fallback fonts and zero
+      // error signal. document.fonts.ready resolves once all currently-pending
+      // FontFaceSet loads complete.
+      await document.fonts.ready;
       const target = bracketRef.current?.querySelector('.bracket-container');
       if (!target) throw new Error('Bracket not ready — try regenerating');
       const canvas = await toCanvas(target, captureOptions);
@@ -110,7 +141,17 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       pdf.save(`${title.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
-      alert(`Failed to export as PDF: ${err.message || 'Unknown error'}. Please try again.`);
+      let userMsg;
+      if (err.message?.includes('tainted')) {
+        userMsg = 'Export blocked by browser security (cross-origin image issue). Try a different theme.';
+      } else if (err.message?.includes('Bracket not ready')) {
+        userMsg = 'Bracket is not fully rendered yet — wait a moment and try again.';
+      } else if (err.message?.includes('empty')) {
+        userMsg = 'The bracket appears empty. Try regenerating it before exporting.';
+      } else {
+        userMsg = `Export failed: ${err.message || 'Unknown error'}. Please try again.`;
+      }
+      setExportError(userMsg);
     } finally {
       setExporting(null);
     }
@@ -119,43 +160,54 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
   const isExporting = exporting !== null;
 
   return (
-    <div className="flex gap-2">
-      <button
-        onClick={handlePNG}
-        disabled={isExporting}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer disabled:opacity-60 disabled:cursor-wait disabled:hover:scale-100"
-        style={{ background: theme.accent, color: theme.winnerText }}
-      >
-        {exporting === 'png' ? (
-          <>
-            <Spinner />
-            Exporting…
-          </>
-        ) : (
-          <>
-            <DownloadIcon />
-            PNG
-          </>
-        )}
-      </button>
-      <button
-        onClick={handlePDF}
-        disabled={isExporting}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer disabled:opacity-60 disabled:cursor-wait disabled:hover:scale-100"
-        style={{ background: theme.accent, color: theme.winnerText }}
-      >
-        {exporting === 'pdf' ? (
-          <>
-            <Spinner />
-            Exporting…
-          </>
-        ) : (
-          <>
-            <PdfIcon />
-            PDF
-          </>
-        )}
-      </button>
+    <div className="flex flex-col gap-2 items-center">
+      <div className="flex gap-2">
+        <button
+          onClick={handlePNG}
+          disabled={isExporting}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer disabled:opacity-60 disabled:cursor-wait disabled:hover:scale-100"
+          style={{ background: theme.accent, color: theme.winnerText }}
+        >
+          {exporting === 'png' ? (
+            <>
+              <Spinner />
+              Exporting…
+            </>
+          ) : (
+            <>
+              <DownloadIcon />
+              PNG
+            </>
+          )}
+        </button>
+        <button
+          onClick={handlePDF}
+          disabled={isExporting}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer disabled:opacity-60 disabled:cursor-wait disabled:hover:scale-100"
+          style={{ background: theme.accent, color: theme.winnerText }}
+        >
+          {exporting === 'pdf' ? (
+            <>
+              <Spinner />
+              Exporting…
+            </>
+          ) : (
+            <>
+              <PdfIcon />
+              PDF
+            </>
+          )}
+        </button>
+      </div>
+      {exportError && (
+        <div
+          role="alert"
+          className="no-print text-sm text-center max-w-md"
+          style={{ color: '#ef4444' }}
+        >
+          {exportError}
+        </div>
+      )}
     </div>
   );
 }
