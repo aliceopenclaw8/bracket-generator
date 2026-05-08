@@ -40,7 +40,7 @@ class Bracket_Generator_Plugin {
         $atts = shortcode_atts(
             [
                 'theme' => 'bw',
-                'ads'   => '', // comma-separated; valid values: 'top', 'bottom'
+                'ads'   => '', // comma-separated; valid values: 'top', 'mid', 'bottom'
             ],
             $atts,
             'bracket-generator'
@@ -63,15 +63,20 @@ class Bracket_Generator_Plugin {
         // so the React component receives final HTML, then stash it on a data
         // attribute. esc_attr() handles the round-trip — quotes, newlines, and
         // <script> bodies all survive; the browser auto-decodes on dataset read.
+        //
+        // IMPORTANT: the receiving end (src/components/AdSlot.jsx) injects this
+        // HTML via innerHTML and re-executes its <script> tags. Do not change
+        // esc_attr() here to a stricter encoder without coordinating with the
+        // React side — would break ad rendering silently.
         $show_mid    = in_array('mid', $ad_positions, true);
-        $mid_html    = $show_mid ? do_shortcode('[gard]') : '';
+        $mid_html    = $show_mid ? $this->safe_gard_html() : '';
 
         ob_start();
         ?>
         <div class="bracket-generator-wrapper">
             <?php if ($show_top): ?>
                 <div class="bracket-ad bracket-ad-top">
-                    <?php echo do_shortcode('[gard]'); ?>
+                    <?php echo $this->safe_gard_html(); ?>
                 </div>
             <?php endif; ?>
 
@@ -82,7 +87,7 @@ class Bracket_Generator_Plugin {
 
             <?php if ($show_bottom): ?>
                 <div class="bracket-ad bracket-ad-bottom">
-                    <?php echo do_shortcode('[gard]'); ?>
+                    <?php echo $this->safe_gard_html(); ?>
                 </div>
             <?php endif; ?>
         </div>
@@ -167,6 +172,23 @@ class Bracket_Generator_Plugin {
             return str_replace(' src=', ' type="module" src=', $tag);
         }
         return $tag;
+    }
+
+    /**
+     * Resolve [gard] safely. Returns rendered ad markup if the GARD plugin
+     * is active, empty string otherwise. Without this guard, do_shortcode()
+     * returns the literal string '[gard]' when the plugin is missing, which
+     * leaks visible junk text to the rendered page (especially bad if
+     * Stuart deactivates GARD for license/upgrade reasons and forgets).
+     */
+    private function safe_gard_html() {
+        if (!shortcode_exists('gard')) {
+            if (function_exists('error_log')) {
+                error_log('[bracket-generator] [gard] shortcode not registered; ad slot suppressed');
+            }
+            return '';
+        }
+        return do_shortcode('[gard]');
     }
 }
 
