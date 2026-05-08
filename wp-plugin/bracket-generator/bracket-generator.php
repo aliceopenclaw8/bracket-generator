@@ -3,7 +3,7 @@
  * Plugin Name: Bracket Generator
  * Plugin URI: https://github.com/aliceopenclaw8/bracket-generator
  * Description: Embed an interactive tournament bracket generator on any page via the [bracket-generator] shortcode. Supports brand-matched theme variants and optional ad slots.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Swee Wai Hoow
  * License: MIT
  * Text Domain: bracket-generator
@@ -139,12 +139,26 @@ class Bracket_Generator_Plugin {
      */
     private function enqueue_assets() {
         $plugin_url = plugin_dir_url(__FILE__);
+        $plugin_dir = plugin_dir_path(__FILE__);
+
+        // Use file modification time as the asset version so every rebuild
+        // changes the ?ver= query param. WP appends ?ver=$ver to the asset
+        // URL — that URL is the cache key for browsers, LiteSpeed, and any
+        // CDN in front of WP (e.g., Cloudflare). Without filemtime we ship
+        // a new bundle but the URL stays identical, so caches keep serving
+        // the old bundle until TTL expires (hours to days). filemtime makes
+        // every rebuild auto-cache-bust through the entire stack.
+        // Falls back to the plugin Version if the file isn't readable.
+        $js_path  = $plugin_dir . 'dist/bracket-generator.js';
+        $css_path = $plugin_dir . 'dist/bracket-generator.css';
+        $js_ver   = file_exists($js_path)  ? (string) filemtime($js_path)  : '1.1.0';
+        $css_ver  = file_exists($css_path) ? (string) filemtime($css_path) : '1.1.0';
 
         wp_enqueue_script(
             'bracket-generator',
             $plugin_url . 'dist/bracket-generator.js',
             [],
-            '1.0.0',
+            $js_ver,
             true // load in footer
         );
 
@@ -152,7 +166,7 @@ class Bracket_Generator_Plugin {
             'bracket-generator',
             $plugin_url . 'dist/bracket-generator.css',
             [],
-            '1.0.0'
+            $css_ver
         );
     }
 
