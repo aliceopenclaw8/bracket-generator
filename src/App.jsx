@@ -17,9 +17,9 @@ function createParticipants(names) {
 }
 
 export default function App({ initialTheme = 'bw', feedbackUrl = null, adMidHtml = null }) {
-  // Title is the export filename — currently a constant since the editable
-  // <Header> was removed in the client-feedback round. Keep it as state to
-  // make a future re-introduction (or per-bracket naming) a one-line change.
+  // Title drives the export filename. Currently a fixed value (no UI to edit
+  // it), but kept as state so adding per-bracket naming later is a one-line
+  // switch from constant to controlled input.
   const [title] = useState('Tournament Bracket');
   const [themeName, setThemeName] = useState(initialTheme);
   const [bracketType, setBracketType] = useState('single');
@@ -36,13 +36,27 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null, adMidHtml
 
   const theme = THEMES[themeName] || THEMES.bw;
 
-  // Auto-scroll the bracket into view when it's freshly generated. WP-page
-  // context: the tool sits mid-page below SEO copy; without this, users land
-  // at the toolbar and have to scroll to see the bracket.
+  // Auto-scroll on first generate. Required when the tool is embedded mid-page
+  // (e.g., below SEO copy on the WP host site) — users would otherwise sit at
+  // the toolbar without seeing the bracket.
+  //
+  // Double-rAF: AutoScaleWrapper (in BracketView) runs a ResizeObserver async
+  // after the React commit. Scrolling synchronously when isGenerated flips true
+  // targets a position that's about to change. First rAF batches with the next
+  // paint; second rAF lands after the ResizeObserver-triggered re-layout
+  // completes. Without this, large brackets land hundreds of pixels off.
   useEffect(() => {
-    if (isGenerated && bracketRef.current) {
-      bracketRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    if (!isGenerated) return;
+    let frame1, frame2;
+    frame1 = requestAnimationFrame(() => {
+      frame2 = requestAnimationFrame(() => {
+        bracketRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame1);
+      if (frame2) cancelAnimationFrame(frame2);
+    };
   }, [isGenerated]);
 
   const handleGenerate = useCallback(() => {
