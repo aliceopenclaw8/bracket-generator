@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import html2canvas from 'html2canvas';
+import { toCanvas } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
 // US Letter landscape dimensions in inches (11" × 8.5")
@@ -14,15 +14,20 @@ const LETTER_PX_H = 2550;
 
 // Performance notes:
 // - 32-team double-sided brackets render a complex DOM (62+ team slots, many
-//   connectors). Export takes 30-60s on typical hardware even with scale=2.
-// - Line-style brackets use SVG path connectors which can stress
-//   rasterization libraries. If line-style at high team counts hangs
-//   indefinitely, that's a known limitation tracked for v1.1 (a deeper fix
+//   connectors). Export takes 30-60s on typical hardware even with
+//   pixelRatio=2 + html-to-image.
+// - Line-style brackets use SVG path connectors via BracketConnectors.
+//   html2canvas struggles to rasterize complex SVG (known issue tracked
+//   in multiple GitHub reports), which caused indefinite hangs on 24-team
+//   line-style exports. Swapping to html-to-image typically 2-3× faster
+//   and significantly more reliable on SVG-heavy DOMs.
+// - If line-style at very high team counts STILL hangs indefinitely after
+//   this swap, that's a known limitation tracked for v1.1 (a deeper fix
 //   would be SVG-native PDF generation, not raster).
-// - Scale lowered from 3 → 2: cuts canvas pixel count by 56% (3² → 2² = 9 → 4)
-//   for ~2-3× faster export. 200 DPI is still print-quality at Letter size
-//   (2200×1700 px on the captured bracket, well above visible-detail
-//   thresholds for printed brackets).
+// - pixelRatio lowered from 3 → 2: cuts canvas pixel count by 56% (3² → 2²
+//   = 9 → 4) for ~2-3× faster export. 200 DPI is still print-quality at
+//   Letter size (2200×1700 px on the captured bracket, well above
+//   visible-detail thresholds for printed brackets).
 export default function ExportButtons({ bracketRef, title, theme, printMargin = 0 }) {
   // Tracks which export (if any) is in progress so the buttons can show a
   // spinner + "Exporting…" label and disable both buttons. Without this,
@@ -33,11 +38,12 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
   // WYSIWYG: capture bracketRef exactly as rendered. Never mutate the live DOM
   // before capture — hiding the header or changing sizes triggers
   // AutoScaleWrapper's ResizeObserver mid-capture and the bracket rescales.
+  // html-to-image API differs from html2canvas: pixelRatio replaces scale,
+  // cacheBust avoids stale image cache for theme switches mid-session.
   const captureOptions = {
     backgroundColor: theme.bg,
-    scale: 2,
-    useCORS: true,
-    logging: false,
+    pixelRatio: 2,
+    cacheBust: true,
   };
 
   const handlePNG = async () => {
@@ -47,7 +53,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       // mx-auto gutters which break Letter aspect and cause letterboxing in export.
       const target = bracketRef.current?.querySelector('.bracket-container');
       if (!target) throw new Error('Bracket not ready — try regenerating');
-      const canvas = await html2canvas(target, captureOptions);
+      const canvas = await toCanvas(target, captureOptions);
       if (canvas.width === 0 || canvas.height === 0) {
         throw new Error('Rendered canvas is empty');
       }
@@ -86,7 +92,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
     try {
       const target = bracketRef.current?.querySelector('.bracket-container');
       if (!target) throw new Error('Bracket not ready — try regenerating');
-      const canvas = await html2canvas(target, captureOptions);
+      const canvas = await toCanvas(target, captureOptions);
       if (canvas.width === 0 || canvas.height === 0) {
         throw new Error('Rendered canvas is empty');
       }

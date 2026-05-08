@@ -111,34 +111,31 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null, adMidHtml
           />
         ) : (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleReset}
-                  data-testid="back-to-setup"
-                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
-                  style={{
-                    background: theme.cardBg,
-                    border: `1px solid ${theme.cardBorder}`,
-                    color: theme.text,
-                  }}
-                >
-                  Back to Setup
-                </button>
-                <ThemePicker themeName={themeName} setThemeName={setThemeName} currentTheme={theme} />
-                <button
-                  onClick={() => setShowSeeds(!showSeeds)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
-                  style={{
-                    background: showSeeds ? theme.accent + '22' : theme.cardBg,
-                    border: `1px solid ${showSeeds ? theme.accent : theme.cardBorder}`,
-                    color: showSeeds ? theme.accent : theme.text,
-                  }}
-                >
-                  {showSeeds ? 'Seeded' : 'Unseeded'}
-                </button>
-              </div>
-              <ExportButtons bracketRef={bracketRef} title={title} theme={theme} printMargin={printMargin} />
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <button
+                onClick={handleReset}
+                data-testid="back-to-setup"
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                style={{
+                  background: theme.cardBg,
+                  border: `1px solid ${theme.cardBorder}`,
+                  color: theme.text,
+                }}
+              >
+                Back to Setup
+              </button>
+              <ThemePicker themeName={themeName} setThemeName={setThemeName} currentTheme={theme} />
+              <button
+                onClick={() => setShowSeeds(!showSeeds)}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                style={{
+                  background: showSeeds ? theme.accent + '22' : theme.cardBg,
+                  border: `1px solid ${showSeeds ? theme.accent : theme.cardBorder}`,
+                  color: showSeeds ? theme.accent : theme.text,
+                }}
+              >
+                {showSeeds ? 'Seeded' : 'Unseeded'}
+              </button>
             </div>
 
             <div ref={bracketRef}>
@@ -154,22 +151,27 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null, adMidHtml
                 showSeeds={showSeeds}
               />
             </div>
+
+            <AdSlot html={adMidHtml} position="mid" />
+
+            <div className="flex justify-center mt-6 no-print">
+              <ExportButtons bracketRef={bracketRef} title={title} theme={theme} printMargin={printMargin} />
+            </div>
+
+            {feedbackUrl && (
+              <div className="no-print flex justify-end mt-4">
+                <a
+                  href={feedbackUrl}
+                  className="text-sm"
+                  style={{ color: theme.accent, textDecoration: 'underline' }}
+                >
+                  Provide feedback
+                </a>
+              </div>
+            )}
           </>
         )}
       </div>
-      {feedbackUrl && (
-        <footer
-          className="no-print text-center py-4 text-sm"
-          style={{ color: theme.textMuted, borderTop: `1px solid ${theme.cardBorder}` }}
-        >
-          <a
-            href={feedbackUrl}
-            style={{ color: theme.accent, textDecoration: 'underline' }}
-          >
-            Provide feedback
-          </a>
-        </footer>
-      )}
     </div>
   );
 }
