@@ -24,7 +24,18 @@ export default function SetupPanel({
   themeName,
   setThemeName,
   adMidHtml,
+  variant = '',
 }) {
+  // Keep this list in sync with bracket-generator.php (PHP whitelist) and
+  // VARIANT_CONFIG in App.jsx. A key missing from any one of the three causes
+  // partial locking: variant prop arrives but heading/team-count rules don't match.
+  const VARIANT_TITLES = {
+    'march-madness': 'Create Your March Madness Bracket',
+    'world-cup': 'Create Your World Cup Bracket',
+  };
+  const isLockedVariant = variant in VARIANT_TITLES;
+  const headingText = VARIANT_TITLES[variant] || 'Create Your Bracket';
+
   const validCount = participantNames.filter(n => n.trim()).length;
 
   // Reset layout to standard if participant count drops below threshold for double-sided
@@ -93,7 +104,7 @@ export default function SetupPanel({
     <div className="max-w-2xl mx-auto py-8">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold mb-2" style={{ color: theme.text }}>
-          Create Your Bracket
+          {headingText}
         </h2>
         <p style={{ color: theme.textMuted }}>
           Add participants, choose bracket type, and customize the look
@@ -102,29 +113,31 @@ export default function SetupPanel({
 
       {/* Compact Options Row */}
       <div className="flex flex-wrap items-end gap-3 mb-6">
-        {/* Bracket Type */}
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium" style={{ color: theme.textMuted }}>Type</span>
-          <div className="flex rounded-md overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
-            {[
-              { value: 'single', label: 'Single Elim' },
-              { value: 'double', label: 'Double Elim' },
-            ].map(opt => (
-              <button
-                key={opt.value}
-                data-testid={`bracket-type-${opt.value}`}
-                onClick={() => setBracketType(opt.value)}
-                className="px-2 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap"
-                style={{
-                  background: bracketType === opt.value ? theme.accent : theme.cardBg,
-                  color: bracketType === opt.value ? theme.winnerText : theme.text,
-                }}
-              >
-                {opt.label}
-              </button>
-            ))}
+        {/* Bracket Type — hidden in variant mode (single-elim only) */}
+        {!isLockedVariant && (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium" style={{ color: theme.textMuted }}>Type</span>
+            <div className="flex rounded-md overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>
+              {[
+                { value: 'single', label: 'Single Elim' },
+                { value: 'double', label: 'Double Elim' },
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  data-testid={`bracket-type-${opt.value}`}
+                  onClick={() => setBracketType(opt.value)}
+                  className="px-2 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap"
+                  style={{
+                    background: bracketType === opt.value ? theme.accent : theme.cardBg,
+                    color: bracketType === opt.value ? theme.winnerText : theme.text,
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Bracket Style */}
         <div className="flex flex-col gap-1">
@@ -228,62 +241,64 @@ export default function SetupPanel({
         </div>
       </div>
 
-      {/* Presets */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
-          Quick Presets
-        </label>
-        <div className="flex gap-2">
-          {presets.map(n => (
-            <button
-              key={n}
-              data-testid={`preset-${n}`}
-              onClick={() => handlePreset(n)}
-              className="px-4 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer"
+      {/* Presets + Custom Count — hidden in variant mode (team count is locked) */}
+      {!isLockedVariant && (
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-2" style={{ color: theme.textMuted }}>
+            Quick Presets
+          </label>
+          <div className="flex gap-2">
+            {presets.map(n => (
+              <button
+                key={n}
+                data-testid={`preset-${n}`}
+                onClick={() => handlePreset(n)}
+                className="px-4 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer"
+                style={{
+                  background: participantNames.length === n ? theme.accent + '33' : theme.cardBg,
+                  border: `1px solid ${participantNames.length === n ? theme.accent : theme.cardBorder}`,
+                  color: theme.text,
+                }}
+              >
+                {n} Teams
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-2">
+            <input
+              type="number"
+              min="2"
+              max="128"
+              value={customCount}
+              onChange={(e) => { setCustomCount(e.target.value); setCustomCountError(''); }}
+              onKeyDown={(e) => e.key === 'Enter' && handleCustomCount()}
+              placeholder="Custom # of teams"
+              data-testid="custom-count-input"
+              className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
               style={{
-                background: participantNames.length === n ? theme.accent + '33' : theme.cardBg,
-                border: `1px solid ${participantNames.length === n ? theme.accent : theme.cardBorder}`,
+                background: theme.cardBg,
+                border: `1px solid ${theme.cardBorder}`,
+                color: theme.text,
+              }}
+            />
+            <button
+              onClick={handleCustomCount}
+              data-testid="custom-count-set"
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer"
+              style={{
+                background: theme.cardBg,
+                border: `1px solid ${theme.cardBorder}`,
                 color: theme.text,
               }}
             >
-              {n} Teams
+              Set
             </button>
-          ))}
+          </div>
+          {customCountError && (
+            <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{customCountError}</p>
+          )}
         </div>
-        <div className="flex gap-2 mt-2">
-          <input
-            type="number"
-            min="2"
-            max="128"
-            value={customCount}
-            onChange={(e) => { setCustomCount(e.target.value); setCustomCountError(''); }}
-            onKeyDown={(e) => e.key === 'Enter' && handleCustomCount()}
-            placeholder="Custom # of teams"
-            data-testid="custom-count-input"
-            className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
-            style={{
-              background: theme.cardBg,
-              border: `1px solid ${theme.cardBorder}`,
-              color: theme.text,
-            }}
-          />
-          <button
-            onClick={handleCustomCount}
-            data-testid="custom-count-set"
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 cursor-pointer"
-            style={{
-              background: theme.cardBg,
-              border: `1px solid ${theme.cardBorder}`,
-              color: theme.text,
-            }}
-          >
-            Set
-          </button>
-        </div>
-        {customCountError && (
-          <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{customCountError}</p>
-        )}
-      </div>
+      )}
 
       {/* Mid ad slot (above Participants) */}
       <AdSlot html={adMidHtml} position="mid" />
@@ -388,17 +403,19 @@ export default function SetupPanel({
                               className="flex-1 bg-transparent outline-none text-sm py-2 px-2"
                               style={{ color: theme.text }}
                             />
-                            <button
-                              onClick={() => removeParticipant(index)}
-                              className="w-8 h-8 flex items-center justify-center rounded hover:opacity-100 opacity-40 transition-opacity shrink-0 cursor-pointer"
-                              style={{ color: theme.text }}
-                              disabled={participantNames.length <= 2}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <line x1="18" y1="6" x2="6" y2="18" />
-                                <line x1="6" y1="6" x2="18" y2="18" />
-                              </svg>
-                            </button>
+                            {!isLockedVariant && (
+                              <button
+                                onClick={() => removeParticipant(index)}
+                                className="w-8 h-8 flex items-center justify-center rounded hover:opacity-100 opacity-40 transition-opacity shrink-0 cursor-pointer"
+                                style={{ color: theme.text }}
+                                disabled={participantNames.length <= 2}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <line x1="18" y1="6" x2="6" y2="18" />
+                                  <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              </button>
+                            )}
                           </div>
                         )}
                       </Draggable>
@@ -409,17 +426,19 @@ export default function SetupPanel({
               </Droppable>
             </DragDropContext>
 
-            <button
-              onClick={addParticipant}
-              className="w-full mt-2 py-2 rounded-lg text-sm font-medium transition-all hover:scale-[1.01] cursor-pointer"
-              style={{
-                background: theme.cardBg,
-                border: `1px dashed ${theme.cardBorder}`,
-                color: theme.textMuted,
-              }}
-            >
-              + Add Participant
-            </button>
+            {!isLockedVariant && (
+              <button
+                onClick={addParticipant}
+                className="w-full mt-2 py-2 rounded-lg text-sm font-medium transition-all hover:scale-[1.01] cursor-pointer"
+                style={{
+                  background: theme.cardBg,
+                  border: `1px dashed ${theme.cardBorder}`,
+                  color: theme.textMuted,
+                }}
+              >
+                + Add Participant
+              </button>
+            )}
           </>
         )}
       </div>
