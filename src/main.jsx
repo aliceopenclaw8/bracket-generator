@@ -54,7 +54,14 @@ export function mount(container, options = {}) {
   if (!container) {
     throw new Error('BracketGenerator.mount: container is required');
   }
-  const theme = options.theme || container.dataset.theme || 'bw';
+  // Theme resolution defers to App.jsx — empty string flows through so variant
+  // default themes can take effect. App resolves the final theme as:
+  // explicit theme > variant default > 'bw'.
+  const theme = options.theme || container.dataset.theme || '';
+  // Variant: locked tournament preset, currently 'march-madness' | 'world-cup' | ''.
+  // Validated upstream in PHP; the React app re-checks via VARIANT_CONFIG lookup,
+  // so an unknown value here harmlessly falls back to generic.
+  const variant = options.variant || container.dataset.variant || '';
   const feedbackUrl =
     options.feedbackUrl ||
     container.dataset.feedbackUrl ||
@@ -69,7 +76,7 @@ export function mount(container, options = {}) {
   root.render(
     <React.StrictMode>
       <BracketGeneratorErrorBoundary feedbackUrl={feedbackUrl}>
-        <App initialTheme={theme} feedbackUrl={feedbackUrl} adMidHtml={adMidHtml} />
+        <App initialTheme={theme} variant={variant} feedbackUrl={feedbackUrl} adMidHtml={adMidHtml} />
       </BracketGeneratorErrorBoundary>
     </React.StrictMode>
   );
@@ -78,7 +85,10 @@ export function mount(container, options = {}) {
 
 // Expose globally for the WP plugin's inline script to call.
 if (typeof window !== 'undefined') {
-  window.BracketGenerator = { version: '1.0.0', mount };
+  // Bumped to match plugin header (bracket-generator.php). This is the only
+  // client-side signal for detecting a stale bundle vs new PHP — checked manually
+  // post-deploy via `window.BracketGenerator.version` in the browser console.
+  window.BracketGenerator = { version: '1.2.0', mount };
 }
 
 // Dev auto-mount: if a #bracket-root exists on page load and isn't already
