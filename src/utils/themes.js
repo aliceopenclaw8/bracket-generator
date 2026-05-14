@@ -149,4 +149,34 @@ export const THEMES = {
     headerBg: '#093969',
     preview: ['#FBFBFB', '#ffffff', '#093969', '#222222'],
   },
+  'march-madness': {
+    name: 'March Madness',
+    bg: '#F4F5FB',          // very light navy tint
+    cardBg: '#ffffff',
+    cardBorder: '#1A2B5C',  // navy
+    accent: '#FF8200',      // bright orange
+    text: '#1A2B5C',
+    textMuted: '#5A6678',
+    winnerBg: '#FF8200',
+    winnerText: '#ffffff',
+    roundLabel: '#1A2B5C',
+    connector: '#1A2B5C',
+    headerBg: '#1A2B5C',
+    preview: ['#F4F5FB', '#ffffff', '#FF8200', '#1A2B5C'],
+  },
+  'world-cup': {
+    name: 'World Cup',
+    bg: '#F0F7F2',          // very light green tint
+    cardBg: '#ffffff',
+    cardBorder: '#006633',  // pitch green
+    accent: '#FFCC00',      // gold
+    text: '#003D1F',
+    textMuted: '#5A6E5C',
+    winnerBg: '#FFCC00',
+    winnerText: '#003D1F',  // gold bg needs dark text for contrast
+    roundLabel: '#006633',
+    connector: '#006633',
+    headerBg: '#006633',
+    preview: ['#F0F7F2', '#ffffff', '#FFCC00', '#006633'],
+  },
 };
