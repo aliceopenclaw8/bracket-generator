@@ -65,24 +65,47 @@ Two shortcode variants lock the bracket into a preset mode — team count, brack
 
 ### Deployment recipe for interbasket.net
 
-**Page 1 — March Madness**
-- Create a new page at slug `bracket-generator/march-madness`
-  → full URL: `https://www.interbasket.net/bracket-generator/march-madness/`
-- Page body shortcode:
-  ```
-  [bracket-generator variant="march-madness"]
-  ```
-- Add your SEO copy (H1, intro, FAQ) around the shortcode as usual.
+You'll create two new WordPress pages — one per variant. Both pages should be **child pages** of your existing `/bracket-generator/` page so the URLs nest cleanly.
 
-**Page 2 — World Cup**
-- Create a new page at slug `bracket-generator/world-cup`
-  → full URL: `https://www.interbasket.net/bracket-generator/world-cup/`
-- Page body shortcode:
-  ```
-  [bracket-generator variant="world-cup"]
-  ```
+#### Step-by-step (do this once per variant)
 
-Both pages are child pages of your existing `/bracket-generator/` page, consistent with your multi-page SEO structure (section 6).
+In WP admin:
+
+1. **Pages → Add New**.
+2. **Title:** set your SEO title. Suggested:
+   - March Madness page: `March Madness Bracket Generator — Free 64-Team Single Elimination`
+   - World Cup page: `World Cup Bracket Generator — Free 32-Team Knockout Bracket`
+3. **Permalink (URL slug):** after typing the title, click `Edit` next to the URL preview that appears under the title field. Set the slug to exactly:
+   - `march-madness` (for the MM page)
+   - `world-cup` (for the WC page)
+4. **Page Attributes** (right sidebar — if you don't see it, click the gear icon at the top-right and toggle "Page Attributes" on):
+   - **Parent:** select your existing **Bracket Generator** page from the dropdown. This nests the new page under `/bracket-generator/` so the final URL is `/bracket-generator/march-madness/`. Skip this and WP puts the page at `/march-madness/` (top level), which is not what you want.
+   - **Order:** leave at `0`.
+5. **Content area** — drop a Shortcode block (or paste as plain text in a Paragraph block — WP recognizes it either way):
+   - MM page: `[bracket-generator variant="march-madness"]`
+   - WC page: `[bracket-generator variant="world-cup"]`
+
+   Add SEO copy (H1, intro paragraphs, "How to use this bracket" steps, FAQ) above and/or below the shortcode. Each variant page should target its own keywords (March Madness terms for MM; World Cup terms for WC).
+6. **Yoast SEO** (if installed): set SEO title + meta description in the Yoast sidebar. See section 5 for templates and schema settings.
+7. **Publish** (top right). Confirm in the dialog.
+8. **Verify** the live URL in an **incognito window** (so you see what visitors see, not your logged-in admin view):
+   - MM: `https://www.interbasket.net/bracket-generator/march-madness/`
+   - WC: `https://www.interbasket.net/bracket-generator/world-cup/`
+
+   The bracket should render with the variant-locked UI — heading shows the variant name, team count is fixed at 64 or 32, no preset buttons or "+ Add Participant" button visible.
+
+Repeat for the second variant.
+
+#### Quick-paste reference
+
+If you've done this once and just want the essentials for the second page:
+
+| Slug | Parent | Shortcode body | Final URL |
+|---|---|---|---|
+| `march-madness` | Bracket Generator | `[bracket-generator variant="march-madness"]` | `/bracket-generator/march-madness/` |
+| `world-cup` | Bracket Generator | `[bracket-generator variant="world-cup"]` | `/bracket-generator/world-cup/` |
+
+Both new pages are children of `/bracket-generator/`, consistent with your multi-page SEO structure (section 6).
 
 ### Post-deploy cache verification
 
