@@ -36,8 +36,9 @@ That's it for installation. The plugin is now available on your site.
 
 | Attribute | Values | Default | Notes |
 |-----------|--------|---------|-------|
-| `theme` | `interbasket`, `printerfriend`, `bw`, `classic`, `emerald`, `sunset`, `arctic`, `volcano`, `midnight`, `sakura` | `bw` | Brand-matched themes for your sites are `interbasket` and `printerfriend`. Others are general palettes. |
+| `theme` | `interbasket`, `printerfriend`, `bw`, `classic`, `emerald`, `sunset`, `arctic`, `volcano`, `midnight`, `sakura`, `march-madness`, `world-cup` | `bw` | Brand-matched themes for your sites are `interbasket` and `printerfriend`. `march-madness` (navy/orange) and `world-cup` (green/gold) can be applied to any page — including the generic shortcode — without locking team count. |
 | `ads` | comma-separated `top`, `bottom` | empty | If set, renders an ad slot above/below the bracket using your existing `[gard]` shortcode. Omit to place ads anywhere on the page yourself with a separate `[gard]`. |
+| `variant` | `march-madness`, `world-cup` | _(none)_ | Locks the bracket into a preset mode (see section 4). When set, team count and bracket type are fixed and the UI controls for changing them are hidden. |
 
 Examples:
 
@@ -45,7 +46,67 @@ Examples:
 - `[bracket-generator theme="interbasket" ads="top"]` — ad above the bracket
 - `[bracket-generator theme="printerfriend" ads="top,bottom"]` — ads above and below
 
-## 4. SEO setup with Yoast
+## 4. Locked variants: March Madness & World Cup
+
+Two shortcode variants lock the bracket into a preset mode — team count, bracket type, and default theme are all fixed. The visitor sees a purpose-built bracket page with no configuration controls.
+
+| Variant | Teams | Type | Default theme | Heading |
+|---------|-------|------|---------------|---------|
+| `march-madness` | 64 | Single elimination | Navy / orange | Create Your March Madness Bracket |
+| `world-cup` | 32 | Single elimination | Green / gold | Create Your World Cup Bracket |
+
+**What the variant locks:**
+- Team count is fixed — the Quick Presets buttons, custom-count input, "+ Add Participant" button, and per-team "×" remove buttons are all hidden from the visitor.
+- Bracket type is forced to single elimination.
+- The heading text updates automatically.
+
+**What it does not lock:**
+- The `theme` attribute still works. If you add `theme="..."` explicitly, the explicit theme wins over the variant's default (see note below). To use the variant's built-in theme, just omit `theme`.
+
+### Deployment recipe for interbasket.net
+
+**Page 1 — March Madness**
+- Create a new page at slug `bracket-generator/march-madness`
+  → full URL: `https://www.interbasket.net/bracket-generator/march-madness/`
+- Page body shortcode:
+  ```
+  [bracket-generator variant="march-madness"]
+  ```
+- Add your SEO copy (H1, intro, FAQ) around the shortcode as usual.
+
+**Page 2 — World Cup**
+- Create a new page at slug `bracket-generator/world-cup`
+  → full URL: `https://www.interbasket.net/bracket-generator/world-cup/`
+- Page body shortcode:
+  ```
+  [bracket-generator variant="world-cup"]
+  ```
+
+Both pages are child pages of your existing `/bracket-generator/` page, consistent with your multi-page SEO structure (section 6).
+
+### Post-deploy cache verification
+
+After publishing both pages:
+
+1. Open each page in an incognito window and do a hard-refresh (`Ctrl+Shift+R` / `Cmd+Shift+R`).
+2. Open browser devtools → **Console** tab, run:
+   ```js
+   window.BracketGenerator.version
+   ```
+   It must return `'1.2.0'`. If it returns `'1.0.0'` or `'1.1.0'`, the old JS is cached.
+3. If stale: purge your CDN cache for the path `/wp-content/plugins/bracket-generator/dist/*`, then hard-refresh again.
+
+### Theme override note
+
+If you ever want to apply a different colour theme to a variant page (e.g., use black-and-white for print):
+
+```
+[bracket-generator variant="march-madness" theme="bw"]
+```
+
+This locks 64 teams (variant is active) but renders in black-and-white (`theme="bw"` wins). To restore the variant's default colours, remove the `theme` attribute entirely.
+
+## 5. SEO setup with Yoast
 
 After publishing the page:
 
@@ -57,13 +118,15 @@ After publishing the page:
 
 Stuart-specific note: your SEO copy doc lists FAQ + SoftwareApplication schema as recommended. SoftwareApplication schema can be added via Yoast's "Schema → Custom" field with JSON-LD; ask if you want me to draft it.
 
-## 5. Multi-page strategy
+## 6. Multi-page strategy
 
 You can place the shortcode on as many pages as you want — each with different SEO copy targeting different keywords (e.g., `/bracket-generator/16-team/`, `/bracket-generator/basketball/`, etc.).
 
 The shortcode is identical across pages; only the surrounding WP page copy changes. Each page Google indexes independently based on its unique copy.
 
-## 6. Updating the plugin
+The variant pages from section 4 (`/march-madness/` and `/world-cup/`) fit naturally into this structure as child pages of `/bracket-generator/`.
+
+## 7. Updating the plugin
 
 When a new version ships:
 1. **Plugins → Installed Plugins → Bracket Generator → Deactivate**
@@ -87,3 +150,12 @@ When a new version ships:
 
 **The bracket appears but looks unstyled**
 - The plugin's CSS file may not have loaded. Check browser devtools → Network tab for `bracket-generator.css` and confirm it returned 200 OK.
+
+**Variant page heading reads the wrong title (e.g., shows "Bracket Generator" instead of "Create Your March Madness Bracket")**
+- Check the `variant` attribute spelling in the shortcode. Typos (e.g., `varient`, `march_madness`) are silently ignored and the page falls back to the generic mode. Valid values are exactly `march-madness` and `world-cup`.
+
+**Variant page shows the wrong team count after updating to v1.2.0**
+- This is almost always a CDN or browser cache serving the old JS bundle. Hard-refresh the page in an incognito window, then open the browser console and check `window.BracketGenerator.version` — it must read `'1.2.0'`. If it still shows an older version, purge your CDN cache for `/wp-content/plugins/bracket-generator/dist/*` and hard-refresh again.
+
+**Variant page is using the wrong colour theme**
+- If you have an explicit `theme="..."` attribute on the shortcode, it overrides the variant's default theme. That's intentional. To use the variant's built-in colours, remove the `theme` attribute from the shortcode entirely.
