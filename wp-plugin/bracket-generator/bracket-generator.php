@@ -3,7 +3,7 @@
  * Plugin Name: Bracket Generator
  * Plugin URI: https://github.com/aliceopenclaw8/bracket-generator
  * Description: Embed an interactive tournament bracket generator on any page via the [bracket-generator] shortcode. Supports brand-matched theme variants and optional ad slots.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Swee Wai Hoow
  * License: MIT
  * Text Domain: bracket-generator
@@ -39,12 +39,19 @@ class Bracket_Generator_Plugin {
     public function render_shortcode($atts) {
         $atts = shortcode_atts(
             [
-                'theme' => 'bw',
-                'ads'   => '', // comma-separated; valid values: 'top', 'mid', 'bottom'
+                'theme'   => '',  // empty string fallback so JS can distinguish "user didn't pick" from "user picked bw"
+                'variant' => '',  // locked tournament variant: 'march-madness' | 'world-cup' | '' (generic)
+                'ads'     => '',  // comma-separated; valid values: 'top', 'mid', 'bottom'
             ],
             $atts,
             'bracket-generator'
         );
+
+        // Whitelist variant — invalid values fall back silently to generic.
+        // Rationale: a typo in a shortcode shouldn't surface as an error to the
+        // site visitor; the page just renders the generic tool instead.
+        $valid_variants = ['', 'march-madness', 'world-cup'];
+        $variant = in_array($atts['variant'], $valid_variants, true) ? $atts['variant'] : '';
 
         self::$instance_count++;
         $instance_id = 'bracket-root-' . self::$instance_count;
@@ -83,6 +90,7 @@ class Bracket_Generator_Plugin {
             <div id="<?php echo esc_attr($instance_id); ?>"
                  class="bracket-generator-mount"
                  data-theme="<?php echo esc_attr($atts['theme']); ?>"
+                 data-variant="<?php echo esc_attr($variant); ?>"
                  data-ads-mid-html="<?php echo esc_attr($mid_html); ?>"></div>
 
             <?php if ($show_bottom): ?>
