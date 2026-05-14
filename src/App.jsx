@@ -12,23 +12,50 @@ const DEFAULT_PARTICIPANTS = [
   'Team 5', 'Team 6', 'Team 7', 'Team 8',
 ];
 
+// Three sources of truth must agree on valid variant keys: this map, the PHP
+// whitelist in bracket-generator.php, and VARIANT_TITLES in SetupPanel.jsx.
+// A key present here but missing from the others silently renders generic.
+const VARIANT_CONFIG = {
+  'march-madness': { teamCount: 64, defaultTheme: 'march-madness' },
+  'world-cup': { teamCount: 32, defaultTheme: 'world-cup' },
+};
+
 function createParticipants(names) {
   return names.map((name, i) => ({ id: `p-${i}`, name, seed: i + 1 }));
 }
 
-export default function App({ initialTheme = 'bw', feedbackUrl = null, adMidHtml = null }) {
+export default function App({ initialTheme = '', variant = '', feedbackUrl = null, adMidHtml = null }) {
+  // Theme resolution: explicit `initialTheme` (from shortcode `theme` attr) > variant default > app default 'bw'.
+  // The PHP layer defaults `theme` to empty string so we can distinguish here.
+  const variantConfig = VARIANT_CONFIG[variant] || null;
+  const resolvedInitialTheme = initialTheme || variantConfig?.defaultTheme || 'bw';
+
   // Title drives the export filename. Currently a fixed value (no UI to edit
   // it), but kept as state so adding per-bracket naming later is a one-line
   // switch from constant to controlled input.
   const [title] = useState('Tournament Bracket');
-  const [themeName, setThemeName] = useState(initialTheme);
+  const [themeName, setThemeName] = useState(resolvedInitialTheme);
   const [bracketType, setBracketType] = useState('single');
+  // Variant mode is single-elim only per spec ("forced Single"). Deriving the
+  // effective value here keeps the lock at the code level instead of relying on
+  // the SetupPanel toggle being hidden — defends against any future code path
+  // that might set bracketType to 'double' in variant mode.
+  const effectiveBracketType = variantConfig ? 'single' : bracketType;
   const [showSeeds, setShowSeeds] = useState(true);
   const [printMargin, setPrintMargin] = useState(0);
   const [layout, setLayout] = useState('standard');
   const [bracketStyle, setBracketStyle] = useState('boxed');
   const [participantsMode, setParticipantsMode] = useState('add-teams');
-  const [participantNames, setParticipantNames] = useState(DEFAULT_PARTICIPANTS);
+  // Lazy initializer (callback form) runs ONCE per mount. This prevents user-typed
+  // team names from being reset on StrictMode double-invoke or parent re-renders.
+  // For variant mode, returns a fresh array of "Team N" placeholders sized to the
+  // variant's locked count; otherwise returns the 8-team default.
+  const [participantNames, setParticipantNames] = useState(() => {
+    if (variantConfig) {
+      return Array.from({ length: variantConfig.teamCount }, (_, i) => `Team ${i + 1}`);
+    }
+    return DEFAULT_PARTICIPANTS;
+  });
   const [bracket, setBracket] = useState(null);
   const [doubleBracket, setDoubleBracket] = useState(null);
   const [isGenerated, setIsGenerated] = useState(false);
@@ -70,7 +97,7 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null, adMidHtml
       if (participants.length < 2) return;
     }
 
-    if (bracketType === 'single') {
+    if (effectiveBracketType === 'single') {
       const result = generateSingleElimination(participants);
       setBracket(result);
       setDoubleBracket(null);
@@ -80,13 +107,13 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null, adMidHtml
       setBracket(null);
     }
     setIsGenerated(true);
-  }, [participantNames, bracketType, participantsMode]);
+  }, [participantNames, effectiveBracketType, participantsMode]);
 
   const handleAdvanceWinner = useCallback((matchId, team, bracketSection) => {
-    if (bracketType === 'single' && bracket) {
+    if (effectiveBracketType === 'single' && bracket) {
       const newRounds = advanceWinner(bracket.rounds, matchId, team);
       setBracket({ ...bracket, rounds: newRounds });
-    } else if (bracketType === 'double' && doubleBracket) {
+    } else if (effectiveBracketType === 'double' && doubleBracket) {
       if (bracketSection === 'winners') {
         const newRounds = advanceWinner(doubleBracket.winnersRounds, matchId, team);
         setDoubleBracket({ ...doubleBracket, winnersRounds: newRounds });
@@ -98,7 +125,7 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null, adMidHtml
         setDoubleBracket({ ...doubleBracket, grandFinals: newGF[0] });
       }
     }
-  }, [bracket, doubleBracket, bracketType]);
+  }, [bracket, doubleBracket, effectiveBracketType]);
 
   const handleReset = useCallback(() => {
     setBracket(null);
@@ -131,6 +158,7 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null, adMidHtml
             themeName={themeName}
             setThemeName={setThemeName}
             adMidHtml={adMidHtml}
+            variant={variant}
           />
         ) : (
           <>
@@ -165,7 +193,7 @@ export default function App({ initialTheme = 'bw', feedbackUrl = null, adMidHtml
               <BracketView
                 bracket={bracket}
                 doubleBracket={doubleBracket}
-                bracketType={bracketType}
+                bracketType={effectiveBracketType}
                 bracketStyle={bracketStyle}
                 layout={layout}
                 theme={theme}
