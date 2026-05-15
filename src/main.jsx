@@ -88,7 +88,7 @@ if (typeof window !== 'undefined') {
   // Bumped to match plugin header (bracket-generator.php). This is the only
   // client-side signal for detecting a stale bundle vs new PHP — checked manually
   // post-deploy via `window.BracketGenerator.version` in the browser console.
-  window.BracketGenerator = { version: '1.2.0', mount };
+  window.BracketGenerator = { version: '1.2.1', mount };
 }
 
 // Dev auto-mount: if a #bracket-root exists on page load and isn't already

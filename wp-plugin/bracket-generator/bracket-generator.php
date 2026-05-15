@@ -3,7 +3,7 @@
  * Plugin Name: Bracket Generator
  * Plugin URI: https://github.com/aliceopenclaw8/bracket-generator
  * Description: Embed an interactive tournament bracket generator on any page via the [bracket-generator] shortcode. Supports brand-matched theme variants and optional ad slots.
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: Swee Wai Hoow
  * License: MIT
  * Text Domain: bracket-generator
