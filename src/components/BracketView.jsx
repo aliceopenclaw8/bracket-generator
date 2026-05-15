@@ -734,6 +734,54 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
     : firstRound.length || 4;
   const sizing = computeBracketSizing(effectiveCount, layout, bracketType);
 
+  // For large single-elim brackets (>32 teams), skip the Letter-aspect-lock and
+  // AutoScaleWrapper so the content renders at natural size in a scrollable parent.
+  // 64-team brackets have 32 matches in round 0 → firstRound.length * 2 = 64 teams.
+  // Threshold is STRICTLY >32: 32-team brackets (16 matches in round 0) keep the
+  // current aspect-locked + AutoScaleWrapper path. Double-elim is always excluded —
+  // its stacked/sideway layouts are already sized for the Letter frame.
+  const teamCount = firstRound.length * 2;
+  const useScrollMode = bracketType === 'single' && teamCount > 32;
+
+  // Shared bracket content (same for both render paths, just AutoScaleWrapper differs)
+  const bracketContent = (
+    <>
+      {bracketType === 'single' && bracket && layout === 'double-sided' && (
+        <DoubleSidedBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} />
+      )}
+      {bracketType === 'single' && bracket && layout !== 'double-sided' && (
+        <SingleBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} />
+      )}
+      {bracketType === 'double' && doubleBracket && (
+        <DoubleBracket doubleBracket={doubleBracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} />
+      )}
+    </>
+  );
+
+  if (useScrollMode) {
+    // Scroll mode: outer div handles overflow-auto scrolling; inner .bracket-container
+    // renders at natural size with overflow:visible so export (html2canvas on
+    // .bracket-container) captures the full bracket without any clipping.
+    // No aspectRatio, no fixed height, no AutoScaleWrapper.
+    return (
+      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 160px)', maxWidth: '100%' }}>
+        <div
+          className="bracket-container rounded-2xl mx-auto flex flex-col"
+          style={{
+            background: theme.bg,
+            border: `1px solid ${theme.cardBorder}`,
+            overflow: 'visible',
+            display: 'inline-flex', // size to natural content width
+          }}
+        >
+          <div className="p-[14px] flex flex-col">
+            {bracketContent}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="bracket-container rounded-2xl overflow-hidden mx-auto flex flex-col"
@@ -752,15 +800,7 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
       <div className="p-[14px] flex-1 min-h-0 overflow-hidden">
         {/* Key remounts so naturalRef re-measures when bracket shape changes. */}
         <AutoScaleWrapper key={`${bracketType}-${layout}-${allRounds.length}-${effectiveCount}`}>
-          {bracketType === 'single' && bracket && layout === 'double-sided' && (
-            <DoubleSidedBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} />
-          )}
-          {bracketType === 'single' && bracket && layout !== 'double-sided' && (
-            <SingleBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} />
-          )}
-          {bracketType === 'double' && doubleBracket && (
-            <DoubleBracket doubleBracket={doubleBracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} />
-          )}
+          {bracketContent}
         </AutoScaleWrapper>
       </div>
     </div>
