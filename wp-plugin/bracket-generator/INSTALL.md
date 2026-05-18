@@ -116,7 +116,7 @@ After publishing both pages:
    ```js
    window.BracketGenerator.version
    ```
-   It must return the current plugin version (`'1.2.1'` as of this release). If it returns an older version string, an old JS bundle is still cached.
+   It must return the current plugin version (`'1.2.2'` as of this release). If it returns an older version string, an old JS bundle is still cached.
 3. If stale: purge your CDN cache for the path `/wp-content/plugins/bracket-generator/dist/*`, then hard-refresh again.
 
 ### Theme override note
@@ -178,7 +178,7 @@ When a new version ships:
 - Check the `variant` attribute spelling in the shortcode. Typos (e.g., `varient`, `march_madness`) are silently ignored and the page falls back to the generic mode. Valid values are exactly `march-madness` and `world-cup`.
 
 **Variant page shows the wrong team count, no scroll bar, or cut-off PNG export after a plugin update**
-- This is almost always a CDN or browser cache serving the old JS bundle. Hard-refresh the page in an incognito window, then open the browser console and check `window.BracketGenerator.version` — it must match the current plugin version (`'1.2.1'` as of this release). If it still shows an older version, purge your CDN cache for `/wp-content/plugins/bracket-generator/dist/*` and hard-refresh again.
+- This is almost always a CDN or browser cache serving the old JS bundle. Hard-refresh the page in an incognito window, then open the browser console and check `window.BracketGenerator.version` — it must match the current plugin version (`'1.2.2'` as of this release). If it still shows an older version, purge your CDN cache for `/wp-content/plugins/bracket-generator/dist/*` and hard-refresh again.
 
 **Variant page is using the wrong colour theme**
 - If you have an explicit `theme="..."` attribute on the shortcode, it overrides the variant's default theme. That's intentional. To use the variant's built-in colours, remove the `theme` attribute from the shortcode entirely.
