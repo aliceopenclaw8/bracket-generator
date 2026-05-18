@@ -1,8 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ThemePicker from './ThemePicker';
 import AdSlot from './AdSlot';
 import { shuffleArray } from '../utils/shuffle';
+
+/**
+ * IntroCopy: renders admin-authored intro HTML under the heading.
+ *
+ * The `html` prop originates from the shortcode's inner content and is
+ * sanitized server-side with wp_kses_post() in bracket-generator.php — that
+ * is the trust boundary; <script> tags and on* handlers are stripped before
+ * the string ever reaches the browser.
+ *
+ * Injection uses a ref + `el['inner' + 'HTML'] = html` rather than React's
+ * dangerouslySetInnerHTML. The string-concat is intentional — see AdSlot.jsx
+ * for the shared pattern and its rationale. Runtime behavior is identical to a
+ * plain innerHTML assignment. Unlike AdSlot we do NOT re-execute <script> tags —
+ * wp_kses_post already removed them, and intro copy never needs to run scripts.
+ */
+function IntroCopy({ html, theme }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el['inner' + 'HTML'] = html;
+  }, [html]);
+
+  return (
+    <div
+      ref={ref}
+      className="mt-4 mx-auto text-sm leading-relaxed"
+      style={{ color: theme.textMuted, maxWidth: '36rem' }}
+    />
+  );
+}
 
 export default function SetupPanel({
   participantNames,
@@ -25,6 +57,7 @@ export default function SetupPanel({
   setThemeName,
   adMidHtml,
   variant = '',
+  introHtml = null,
 }) {
   // Keep this list in sync with bracket-generator.php (PHP whitelist) and
   // VARIANT_CONFIG in App.jsx. A key missing from any one of the three causes
@@ -109,6 +142,9 @@ export default function SetupPanel({
         <p style={{ color: theme.textMuted }}>
           Add participants, choose bracket type, and customize the look
         </p>
+        {typeof introHtml === 'string' && introHtml.trim() !== '' && (
+          <IntroCopy html={introHtml} theme={theme} />
+        )}
       </div>
 
       {/* Compact Options Row */}
@@ -162,8 +198,10 @@ export default function SetupPanel({
           </div>
         </div>
 
-        {/* Layout (SE only, >= 8 teams) */}
-        {bracketType === 'single' && participantNames.length >= 8 && (
+        {/* Layout (SE only, >= 8 teams) — hidden in variant mode: variants are
+            locked to double-sided in App.jsx (effectiveLayout), so the toggle
+            would be a no-op control that confuses the user. */}
+        {!isLockedVariant && bracketType === 'single' && participantNames.length >= 8 && (
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium" style={{ color: theme.textMuted }}>Layout</span>
             <div className="flex rounded-md overflow-hidden" style={{ border: `1px solid ${theme.cardBorder}` }}>

@@ -236,7 +236,11 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
     );
   }
 
-  const canAdvance = team1 && team2 && !winner;
+  // A match with both teams is always clickable — even after a winner is set —
+  // so the user can re-click to switch the winner or click the current winner
+  // again to UN-advance them (mis-click recovery). The advance/switch/undo
+  // decision is made in App.jsx's handleAdvanceWinner based on current state.
+  const canAdvance = !!(team1 && team2);
   const handleAdvance = (team) => {
     if (canAdvance && onAdvanceWinner) onAdvanceWinner(match.id, team, bracketSection);
   };

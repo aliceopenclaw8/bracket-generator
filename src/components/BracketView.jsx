@@ -3,6 +3,21 @@ import BracketRound from './BracketRound';
 import BracketConnectors from './BracketConnectors';
 import { Pill, TeamSlot } from './MatchCard';
 import { getRoundLabel, splitBracketForDoubleSided } from '../utils/bracketLogic';
+// `?inline` base64-inlines the logo at build time instead of emitting a separate
+// asset file. This is essential for export: the exporter (html-to-image) captures
+// .bracket-container, and a base64 data URI has no CORS restriction and no async
+// load timing — the <img> is "loaded" the instant it renders. A normal asset URL
+// would risk a blank logo in the PNG/PDF if capture fired before the file loaded,
+// and would also break in the single-file WP plugin bundle (no separate assets).
+import mmLogo from '../assets/march-madness-logo.png?inline';
+import worldCupLogo from '../assets/world-cup-logo.png?inline';
+
+// Maps variant key → inlined logo data URI. Generic (non-variant) brackets have
+// no entry, so no logo renders.
+const VARIANT_LOGOS = {
+  'march-madness': mmLogo,
+  'world-cup': worldCupLogo,
+};
 
 function computeBracketSizing(firstRoundMatchCount, layout, bracketType) {
   // Tight padY at >16 tiers keeps tall brackets within page height.
@@ -323,15 +338,28 @@ function ChampionFooter({ finals, theme, sizing, bracketStyle }) {
   );
 }
 
-function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle }) {
+function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds, bracketStyle, scrollMode = false, variant = '' }) {
   const { west, east, finals } = splitBracketForDoubleSided(bracket.rounds);
   const westRef = useRef(null);
   const eastRef = useRef(null);
   const outerRef = useRef(null);
+  const variantLogo = VARIANT_LOGOS[variant] || null;
+
+  // In scroll mode there is no AutoScaleWrapper and no definite height anywhere up
+  // the parent chain. `h-full` (height:100%) then resolves against a height-less
+  // ancestor and collapses toward 0, dragging the `flex-1` inner rows/columns to
+  // near-zero height — the bracket renders as a thin unreadable strip. Swapping the
+  // height-percentage classes for natural content sizing (`h-auto`, no `flex-1`)
+  // lets the bracket size to its intrinsic content height instead. The aspect-locked
+  // (non-scroll) path keeps `h-full`/`flex-1` so AutoScaleWrapper can stretch it.
+  const rootClass = scrollMode ? 'flex flex-col w-full' : 'flex flex-col w-full h-full';
+  const rowClass = scrollMode
+    ? 'relative flex items-stretch justify-between w-full'
+    : 'relative flex items-stretch justify-between w-full flex-1';
 
   return (
-    <div className="flex flex-col w-full h-full">
-      <div className="relative flex items-stretch justify-between w-full flex-1" style={{ padding: '20px 0' }} ref={outerRef}>
+    <div className={rootClass}>
+      <div className={rowClass} style={{ padding: '20px 0' }} ref={outerRef}>
         <FinalsConnectors containerRef={outerRef} west={west} east={east} finals={finals} theme={theme} bracketStyle={bracketStyle} />
 
         {/* West side (left to right) — flex:1 so it fills its slice */}
@@ -363,6 +391,31 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
             original main-branch layout where MatchCard renders the 🏆 CHAMPS / FINALS pill stack
             above the final match). */}
         <div className="relative flex items-stretch gap-0 mx-4">
+          {/* Variant logo (March Madness / World Cup): absolutely positioned in the
+              center column's upper empty space. The finals/championship card is
+              vertically centered by BracketRound's `justify-around`, leaving the
+              upper region empty — the logo sits there so it never overlaps or
+              obscures the card. pointer-events-none guarantees clicks always reach
+              the card; z-index 4 keeps it below the connector SVG (z-10). The img
+              is base64-inlined (see VARIANT_LOGOS import) so it is captured
+              reliably in PNG/PDF exports. Generic brackets have no logo. */}
+          {variantLogo && (
+            <img
+              src={variantLogo}
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                top: '16%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '180px',
+                height: 'auto',
+                zIndex: 4,
+                pointerEvents: 'none',
+              }}
+            />
+          )}
           <BracketRound
             matches={finals}
             roundIndex={0}
@@ -724,7 +777,7 @@ function DoubleBracket(props) {
   return useStacked ? <DoubleBracketStacked {...props} /> : <DoubleBracketSideway {...props} />;
 }
 
-export default function BracketView({ bracket, doubleBracket, bracketType, bracketStyle, layout, theme, onAdvanceWinner, showSeeds }) {
+export default function BracketView({ bracket, doubleBracket, bracketType, bracketStyle, layout, theme, onAdvanceWinner, showSeeds, variant = '' }) {
   // Use effective match count for sizing (skip bye-dominated first rounds)
   const allRounds = bracket?.rounds || doubleBracket?.winnersRounds || [];
   const firstRound = allRounds[0] || [];
@@ -743,11 +796,13 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
   const teamCount = firstRound.length * 2;
   const useScrollMode = bracketType === 'single' && teamCount > 32;
 
-  // Shared bracket content (same for both render paths, just AutoScaleWrapper differs)
+  // Shared bracket content (same for both render paths, just AutoScaleWrapper differs).
+  // DoubleSidedBracket receives `scrollMode` so it can drop the `h-full`/`flex-1`
+  // height chain when there is no AutoScaleWrapper providing a definite parent height.
   const bracketContent = (
     <>
       {bracketType === 'single' && bracket && layout === 'double-sided' && (
-        <DoubleSidedBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} />
+        <DoubleSidedBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} scrollMode={useScrollMode} variant={variant} />
       )}
       {bracketType === 'single' && bracket && layout !== 'double-sided' && (
         <SingleBracket bracket={bracket} theme={theme} onAdvanceWinner={onAdvanceWinner} sizing={sizing} showSeeds={showSeeds} bracketStyle={bracketStyle} />

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { generateSingleElimination, generateDoubleElimination, advanceWinner } from './utils/bracketLogic';
+import { generateSingleElimination, generateDoubleElimination, advanceWinner, unadvanceWinner } from './utils/bracketLogic';
 import { THEMES } from './utils/themes';
 import SetupPanel from './components/SetupPanel';
 import BracketView from './components/BracketView';
@@ -24,7 +24,7 @@ function createParticipants(names) {
   return names.map((name, i) => ({ id: `p-${i}`, name, seed: i + 1 }));
 }
 
-export default function App({ initialTheme = '', variant = '', feedbackUrl = null, adMidHtml = null }) {
+export default function App({ initialTheme = '', variant = '', feedbackUrl = null, adMidHtml = null, introHtml = null }) {
   // Theme resolution: explicit `initialTheme` (from shortcode `theme` attr) > variant default > app default 'bw'.
   // The PHP layer defaults `theme` to empty string so we can distinguish here.
   const variantConfig = VARIANT_CONFIG[variant] || null;
@@ -44,6 +44,11 @@ export default function App({ initialTheme = '', variant = '', feedbackUrl = nul
   const [showSeeds, setShowSeeds] = useState(true);
   const [printMargin, setPrintMargin] = useState(0);
   const [layout, setLayout] = useState('standard');
+  // Variants are locked to double-sided: the centered logo and symmetric draw
+  // only make visual sense in that layout. Deriving effectiveLayout here (same
+  // pattern as effectiveBracketType above) keeps the lock at the code level so
+  // no code path can bypass it by setting `layout` state directly.
+  const effectiveLayout = variantConfig ? 'double-sided' : layout;
   const [bracketStyle, setBracketStyle] = useState('boxed');
   const [participantsMode, setParticipantsMode] = useState('add-teams');
   // Lazy initializer (callback form) runs ONCE per mount. This prevents user-typed
@@ -109,19 +114,47 @@ export default function App({ initialTheme = '', variant = '', feedbackUrl = nul
     setIsGenerated(true);
   }, [participantNames, effectiveBracketType, participantsMode]);
 
+  // Click semantics for a team slot in a match:
+  //  - no winner yet                  → advance the clicked team
+  //  - winner is the OTHER team       → switch the winner (advanceWinner overwrites)
+  //  - winner IS the clicked team     → un-advance (mis-click recovery)
+  // findMatchWinnerId locates the match across a flat list of rounds so we can
+  // tell which of the three cases applies before mutating.
+  const findMatchWinnerId = (rounds, matchId) => {
+    for (const round of rounds) {
+      for (const match of round) {
+        if (match.id === matchId) return match.winner?.id ?? null;
+      }
+    }
+    return null;
+  };
+
   const handleAdvanceWinner = useCallback((matchId, team, bracketSection) => {
     if (effectiveBracketType === 'single' && bracket) {
-      const newRounds = advanceWinner(bracket.rounds, matchId, team);
+      // If the clicked team is already the winner, undo; otherwise advance/switch.
+      const isUndo = findMatchWinnerId(bracket.rounds, matchId) === team.id;
+      const newRounds = isUndo
+        ? unadvanceWinner(bracket.rounds, matchId, team)
+        : advanceWinner(bracket.rounds, matchId, team);
       setBracket({ ...bracket, rounds: newRounds });
     } else if (effectiveBracketType === 'double' && doubleBracket) {
       if (bracketSection === 'winners') {
-        const newRounds = advanceWinner(doubleBracket.winnersRounds, matchId, team);
+        const isUndo = findMatchWinnerId(doubleBracket.winnersRounds, matchId) === team.id;
+        const newRounds = isUndo
+          ? unadvanceWinner(doubleBracket.winnersRounds, matchId, team)
+          : advanceWinner(doubleBracket.winnersRounds, matchId, team);
         setDoubleBracket({ ...doubleBracket, winnersRounds: newRounds });
       } else if (bracketSection === 'losers') {
-        const newRounds = advanceWinner(doubleBracket.losersRounds, matchId, team);
+        const isUndo = findMatchWinnerId(doubleBracket.losersRounds, matchId) === team.id;
+        const newRounds = isUndo
+          ? unadvanceWinner(doubleBracket.losersRounds, matchId, team)
+          : advanceWinner(doubleBracket.losersRounds, matchId, team);
         setDoubleBracket({ ...doubleBracket, losersRounds: newRounds });
       } else if (bracketSection === 'grandFinals') {
-        const newGF = advanceWinner([doubleBracket.grandFinals], matchId, team);
+        const isUndo = findMatchWinnerId([doubleBracket.grandFinals], matchId) === team.id;
+        const newGF = isUndo
+          ? unadvanceWinner([doubleBracket.grandFinals], matchId, team)
+          : advanceWinner([doubleBracket.grandFinals], matchId, team);
         setDoubleBracket({ ...doubleBracket, grandFinals: newGF[0] });
       }
     }
@@ -134,7 +167,11 @@ export default function App({ initialTheme = '', variant = '', feedbackUrl = nul
   }, []);
 
   return (
-    <div style={{ background: theme.bg, color: theme.text, minHeight: '100vh' }}
+    // Setup screen uses a plain white background so the embedded tool blends into
+    // the host WP page instead of looking like a distinctly tinted box. Once a
+    // bracket is generated, the themed background returns. Export still captures
+    // theme.bg (it reads .bracket-container, not this outer div) — unaffected.
+    <div style={{ background: isGenerated ? theme.bg : '#ffffff', color: theme.text, minHeight: '100vh' }}
          className="transition-colors duration-300">
       <div className="max-w-screen-2xl mx-auto px-4 pb-12">
         {!isGenerated ? (
@@ -159,6 +196,7 @@ export default function App({ initialTheme = '', variant = '', feedbackUrl = nul
             setThemeName={setThemeName}
             adMidHtml={adMidHtml}
             variant={variant}
+            introHtml={introHtml}
           />
         ) : (
           <>
@@ -195,11 +233,12 @@ export default function App({ initialTheme = '', variant = '', feedbackUrl = nul
                 doubleBracket={doubleBracket}
                 bracketType={effectiveBracketType}
                 bracketStyle={bracketStyle}
-                layout={layout}
+                layout={effectiveLayout}
                 theme={theme}
                 title={title}
                 onAdvanceWinner={handleAdvanceWinner}
                 showSeeds={showSeeds}
+                variant={variant}
               />
             </div>
 

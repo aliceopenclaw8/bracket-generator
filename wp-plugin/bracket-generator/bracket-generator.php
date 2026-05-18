@@ -35,8 +35,13 @@ class Bracket_Generator_Plugin {
 
     /**
      * Render the [bracket-generator theme="..." ads="top,bottom"] shortcode.
+     *
+     * @param array  $atts    Shortcode attributes.
+     * @param string $content Inner content between the open/close shortcode tags.
+     *                        Used as editable intro copy shown under the heading,
+     *                        e.g. [bracket-generator variant="world-cup"]<p>Intro…</p>[/bracket-generator]
      */
-    public function render_shortcode($atts) {
+    public function render_shortcode($atts, $content = '') {
         $atts = shortcode_atts(
             [
                 'theme'   => '',  // empty string fallback so JS can distinguish "user didn't pick" from "user picked bw"
@@ -78,6 +83,17 @@ class Bracket_Generator_Plugin {
         $show_mid    = in_array('mid', $ad_positions, true);
         $mid_html    = $show_mid ? $this->safe_gard_html() : '';
 
+        // Editable intro copy: the shortcode's inner content. wp_kses_post() allows
+        // the same safe HTML subset WP permits in post bodies (<p>, <a>, <strong>,
+        // lists, etc.) and strips <script> tags and on* event handlers, so the React
+        // side can safely inject it. This is the server-side sanitization boundary —
+        // by the time React renders it, the markup is already trusted. Stashed on a
+        // data attribute the same way as $mid_html — esc_attr() handles the
+        // round-trip and the browser auto-decodes on dataset read. do_shortcode()
+        // lets editors nest other shortcodes inside the intro if desired; trim()
+        // drops the stray newlines WP leaves around block-level inner content.
+        $intro_html = trim($content) !== '' ? wp_kses_post(do_shortcode($content)) : '';
+
         ob_start();
         ?>
         <div class="bracket-generator-wrapper">
@@ -91,7 +107,8 @@ class Bracket_Generator_Plugin {
                  class="bracket-generator-mount"
                  data-theme="<?php echo esc_attr($atts['theme']); ?>"
                  data-variant="<?php echo esc_attr($variant); ?>"
-                 data-ads-mid-html="<?php echo esc_attr($mid_html); ?>"></div>
+                 data-ads-mid-html="<?php echo esc_attr($mid_html); ?>"
+                 data-intro-html="<?php echo esc_attr($intro_html); ?>"></div>
 
             <?php if ($show_bottom): ?>
                 <div class="bracket-ad bracket-ad-bottom">

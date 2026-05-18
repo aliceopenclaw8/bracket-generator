@@ -275,6 +275,52 @@ export function advanceWinner(rounds, matchId, team) {
   return newRounds;
 }
 
+// Un-advance a winner in single elimination — the inverse of advanceWinner.
+// Used when the user clicks the team that is ALREADY the match winner (mis-click
+// recovery). Clears this match's winner, removes the team it fed into the next
+// round, and cascade-clears everything downstream via clearDownstream.
+export function unadvanceWinner(rounds, matchId, team) {
+  const newRounds = rounds.map(round =>
+    round.map(match => ({ ...match }))
+  );
+
+  let matchRound = -1;
+  let matchPos = -1;
+  for (let r = 0; r < newRounds.length; r++) {
+    for (let m = 0; m < newRounds[r].length; m++) {
+      if (newRounds[r][m].id === matchId) {
+        matchRound = r;
+        matchPos = m;
+        break;
+      }
+    }
+  }
+
+  if (matchRound === -1) return newRounds;
+
+  const current = newRounds[matchRound][matchPos];
+  if (!current.winner || current.winner.id !== team.id) return newRounds;
+
+  current.winner = null;
+
+  const nextRound = matchRound + 1;
+  if (nextRound < newRounds.length) {
+    const nextMatchPos = Math.floor(matchPos / 2);
+    const isTop = matchPos % 2 === 0;
+    if (nextMatchPos < newRounds[nextRound].length) {
+      if (isTop) {
+        newRounds[nextRound][nextMatchPos].team1 = null;
+      } else {
+        newRounds[nextRound][nextMatchPos].team2 = null;
+      }
+      // clearDownstream clears the next match's own winner + everything below it.
+      clearDownstream(newRounds, nextRound, nextMatchPos);
+    }
+  }
+
+  return newRounds;
+}
+
 function clearDownstream(rounds, roundIdx, matchIdx) {
   const match = rounds[roundIdx][matchIdx];
   if (match.winner) {

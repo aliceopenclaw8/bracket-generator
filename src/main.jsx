@@ -48,6 +48,7 @@ class BracketGeneratorErrorBoundary extends React.Component {
  * @param {string} [options.theme] - Theme name. Falls back to container.dataset.theme.
  * @param {string} [options.feedbackUrl] - Feedback link URL. Falls back to container.dataset.feedbackUrl.
  * @param {string} [options.adMidHtml] - Pre-rendered AdSense HTML for the mid slot. Falls back to container.dataset.adsMidHtml.
+ * @param {string} [options.introHtml] - Admin-authored intro copy (sanitized server-side). Falls back to container.dataset.introHtml.
  * @returns {import('react-dom/client').Root} The React root, in case the caller needs to unmount later.
  */
 export function mount(container, options = {}) {
@@ -71,12 +72,17 @@ export function mount(container, options = {}) {
   // when "mid" is not in the shortcode's ads="..." list — AdSlot then renders
   // nothing, costing zero DOM nodes.
   const adMidHtml = options.adMidHtml || container.dataset.adsMidHtml || null;
+  // Admin-authored intro copy from the shortcode's inner content. Already
+  // sanitized server-side with wp_kses_post() (see bracket-generator.php), so the
+  // markup is trusted by the time it reaches React. Null when the shortcode has
+  // no inner content — SetupPanel then renders no intro paragraph.
+  const introHtml = options.introHtml || container.dataset.introHtml || null;
 
   const root = createRoot(container);
   root.render(
     <React.StrictMode>
       <BracketGeneratorErrorBoundary feedbackUrl={feedbackUrl}>
-        <App initialTheme={theme} variant={variant} feedbackUrl={feedbackUrl} adMidHtml={adMidHtml} />
+        <App initialTheme={theme} variant={variant} feedbackUrl={feedbackUrl} adMidHtml={adMidHtml} introHtml={introHtml} />
       </BracketGeneratorErrorBoundary>
     </React.StrictMode>
   );
