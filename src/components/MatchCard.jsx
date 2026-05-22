@@ -6,7 +6,7 @@ function svgBaselineY(height, fontSize) { return height / 2 + fontSize * 0.36; }
 
 function SeedBadge({ seed, theme, isWinner, isLine }) {
   const seedStr = String(seed);
-  const FS = 11;
+  const FS = 14;
   const W = seedStr.length === 1 ? 20 : 24;
   const H = 18;
   const BASELINE_Y = svgBaselineY(H, FS);
@@ -123,7 +123,7 @@ export function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketSt
     ? {
         flex: '1 1 0',
         minWidth: 0,
-        fontSize: '14px',
+        fontSize: '17px',
         fontWeight: isWinner ? 700 : isEmpty ? 400 : 500,
         color: isWinner ? theme.accent : isEmpty ? 'transparent' : theme.text,
         whiteSpace: 'nowrap',
@@ -132,7 +132,7 @@ export function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketSt
     : {
         flex: '1 1 0',
         minWidth: 0,
-        fontSize: '14px',
+        fontSize: '17px',
         fontWeight: 500,
         color: isWinner ? theme.winnerText : isEmpty ? theme.textMuted : theme.text,
         whiteSpace: 'nowrap',
@@ -278,7 +278,7 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
       {isChampionship && bracketStyle !== 'line' && (
         <>
           <div style={{ marginBottom: '8px' }}>
-            <Pill text="🏆 CHAMPS" color={theme.accent} bg={theme.accent + '22'} fontSize={9} paddingX={10} />
+            <Pill text="🏆 CHAMPS" color={theme.accent} bg={theme.accent + '22'} fontSize={12} paddingX={10} />
           </div>
           {/* CHAMPS winner singleton: width wrapper only; TeamSlot renders its own */}
           {/* 4px accent border via isChampionship (no fill color — same emphasis */}
@@ -299,7 +299,7 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
             />
           </div>
           <div style={{ marginTop: '10px', marginBottom: '8px' }}>
-            <Pill text="FINALS" color={theme.accent} bg={theme.accent + '22'} fontSize={9} paddingX={10} />
+            <Pill text="FINALS" color={theme.accent} bg={theme.accent + '22'} fontSize={12} paddingX={10} />
           </div>
         </>
       )}

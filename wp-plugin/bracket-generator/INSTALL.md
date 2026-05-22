@@ -86,7 +86,7 @@ In WP admin:
    - WC page: `[bracket-generator variant="world-cup"]`
 
    Add SEO copy (H1, intro paragraphs, "How to use this bracket" steps, FAQ) above and/or below the shortcode. Each variant page should target its own keywords (March Madness terms for MM; World Cup terms for WC).
-6. **Yoast SEO** (if installed): set SEO title + meta description in the Yoast sidebar. See section 5 for templates and schema settings.
+6. **Yoast SEO** (if installed): set SEO title + meta description in the Yoast sidebar. See section 6 for templates and schema settings.
 7. **Publish** (top right). Confirm in the dialog.
 8. **Verify** the live URL in an **incognito window** (so you see what visitors see, not your logged-in admin view):
    - MM: `https://www.interbasket.net/bracket-generator/march-madness/`
@@ -105,7 +105,7 @@ If you've done this once and just want the essentials for the second page:
 | `march-madness` | Bracket Generator | `[bracket-generator variant="march-madness"]` | `/bracket-generator/march-madness/` |
 | `world-cup` | Bracket Generator | `[bracket-generator variant="world-cup"]` | `/bracket-generator/world-cup/` |
 
-Both new pages are children of `/bracket-generator/`, consistent with your multi-page SEO structure (section 6).
+Both new pages are children of `/bracket-generator/`, consistent with your multi-page SEO structure (section 7).
 
 ### Post-deploy cache verification
 
@@ -116,7 +116,7 @@ After publishing both pages:
    ```js
    window.BracketGenerator.version
    ```
-   It must return the current plugin version (`'1.2.2'` as of this release). If it returns an older version string, an old JS bundle is still cached.
+   It must return the current plugin version (`'1.3.0'` as of this release). If it returns an older version string, an old JS bundle is still cached.
 3. If stale: purge your CDN cache for the path `/wp-content/plugins/bracket-generator/dist/*`, then hard-refresh again.
 
 ### Theme override note
@@ -129,7 +129,47 @@ If you ever want to apply a different colour theme to a variant page (e.g., use 
 
 This locks 64 teams (variant is active) but renders in black-and-white (`theme="bw"` wins). To restore the variant's default colours, remove the `theme` attribute entirely.
 
-## 5. SEO setup with Yoast
+## 5. Customizing the intro copy
+
+Anything you place **between** the opening and closing shortcode tags renders inside the bracket tool, just below the heading and subtitle, as a styled callout panel. The panel automatically picks up the active variant's theme colour — navy for `march-madness`, green for `world-cup`, or whatever `theme="..."` you've set.
+
+### Basic example
+
+```
+[bracket-generator variant="world-cup"]
+<p>The 2026 FIFA World Cup will once again bring together 48 national soccer teams for a month of unforgettable matches, knockout round drama, and global competition. Our 2026 World Cup Bracket Generator helps fans create printable and customizable tournament brackets...</p>
+[/bracket-generator]
+```
+
+The `<p>` renders inside the tool with the variant's green callout styling — no theme attribute needed.
+
+### Editing in the WordPress block editor
+
+In Gutenberg, use a **Shortcode** block (not a Paragraph block — Paragraph blocks won't keep the HTML between the tags intact). Paste the full shortcode including the inner HTML and both opening/closing tags. To update the copy later, open the page, edit the HTML inside the Shortcode block, and **Update** the page. No plugin or code changes needed.
+
+### Overriding the default callout style
+
+If the themed callout doesn't suit a particular page (e.g., you want a neutral grey block, or you want the copy to look like plain body text), wrap the inner content in a `<div>` with inline styles. Inline styles win over the plugin's default styling:
+
+```
+[bracket-generator variant="march-madness"]
+<div style="background:#f3f4f6; color:#111; padding:1rem; border-radius:8px;">
+  Custom-styled intro paragraph.
+</div>
+[/bracket-generator]
+```
+
+### Allowed HTML
+
+The plugin sanitizes inner content through WordPress's `wp_kses_post()` filter — the same filter WP uses for post content. That means standard post tags are allowed (`<p>`, `<a>`, `<strong>`, `<em>`, `<ul>`, `<li>`, `<div>` with `style` attributes, etc.) and anything dangerous (`<script>`, inline event handlers like `onclick="..."`) is stripped before it reaches the browser. If a tag or attribute doesn't render, it was probably filtered out — switch to a post-allowed equivalent.
+
+### Known limitations
+
+**Light-themed pages with intro HTML show white-on-white text.** The callout panel forces white text but inherits the active theme's header background colour. The bundled variants (`march-madness`, `world-cup`) use dark headers, so this works out of the box. If you override to a light theme via `theme="classic"` (or any of the other light-backgrounded themes — `emerald`, `sunset`, `arctic`, `volcano`, `midnight`, `sakura`) AND have intro HTML between the shortcode tags, the callout text becomes invisible against the white panel. **Workaround:** wrap your inner HTML with an explicit text colour, e.g. `<div style="color:#000">your copy here</div>`.
+
+**Long team names can overflow card width on 64-team brackets.** In scroll mode (>32 teams), each card is ~170px wide. At the v1.3.0 font size, names longer than ~15 characters may overlap into adjacent match columns. This is the same overflow profile as v1.2.2 — abbreviated names like "UConn", "UNC", and "Duke" fit cleanly; full names like "University of Connecticut" don't. **Workaround:** use abbreviated team names for 64-team brackets.
+
+## 6. SEO setup with Yoast
 
 After publishing the page:
 
@@ -141,7 +181,7 @@ After publishing the page:
 
 Stuart-specific note: your SEO copy doc lists FAQ + SoftwareApplication schema as recommended. SoftwareApplication schema can be added via Yoast's "Schema → Custom" field with JSON-LD; ask if you want me to draft it.
 
-## 6. Multi-page strategy
+## 7. Multi-page strategy
 
 You can place the shortcode on as many pages as you want — each with different SEO copy targeting different keywords (e.g., `/bracket-generator/16-team/`, `/bracket-generator/basketball/`, etc.).
 
@@ -149,7 +189,7 @@ The shortcode is identical across pages; only the surrounding WP page copy chang
 
 The variant pages from section 4 (`/march-madness/` and `/world-cup/`) fit naturally into this structure as child pages of `/bracket-generator/`.
 
-## 7. Updating the plugin
+## 8. Updating the plugin
 
 When a new version ships:
 1. **Plugins → Installed Plugins → Bracket Generator → Deactivate**
@@ -178,7 +218,7 @@ When a new version ships:
 - Check the `variant` attribute spelling in the shortcode. Typos (e.g., `varient`, `march_madness`) are silently ignored and the page falls back to the generic mode. Valid values are exactly `march-madness` and `world-cup`.
 
 **Variant page shows the wrong team count, no scroll bar, or cut-off PNG export after a plugin update**
-- This is almost always a CDN or browser cache serving the old JS bundle. Hard-refresh the page in an incognito window, then open the browser console and check `window.BracketGenerator.version` — it must match the current plugin version (`'1.2.2'` as of this release). If it still shows an older version, purge your CDN cache for `/wp-content/plugins/bracket-generator/dist/*` and hard-refresh again.
+- This is almost always a CDN or browser cache serving the old JS bundle. Hard-refresh the page in an incognito window, then open the browser console and check `window.BracketGenerator.version` — it must match the current plugin version (`'1.3.0'` as of this release). If it still shows an older version, purge your CDN cache for `/wp-content/plugins/bracket-generator/dist/*` and hard-refresh again.
 
 **Variant page is using the wrong colour theme**
 - If you have an explicit `theme="..."` attribute on the shortcode, it overrides the variant's default theme. That's intentional. To use the variant's built-in colours, remove the `theme` attribute from the shortcode entirely.

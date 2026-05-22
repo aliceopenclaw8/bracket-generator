@@ -30,8 +30,16 @@ function IntroCopy({ html, theme }) {
   return (
     <div
       ref={ref}
-      className="mt-4 mx-auto text-sm leading-relaxed"
-      style={{ color: theme.textMuted, maxWidth: '36rem' }}
+      className="bracket-intro-copy mx-auto text-sm leading-relaxed"
+      style={{
+        background: theme.headerBg || '#1A2B5C',
+        color: '#ffffff',
+        padding: '1rem 1.25rem',
+        borderRadius: '8px',
+        marginTop: '1rem',
+        marginBottom: '1rem',
+        maxWidth: '36rem',
+      }}
     />
   );
 }
@@ -65,6 +73,10 @@ export default function SetupPanel({
   const VARIANT_TITLES = {
     'march-madness': 'Create Your March Madness Bracket',
     'world-cup': 'Create Your World Cup Bracket',
+  };
+  const VARIANT_SUBTITLES = {
+    'march-madness': 'Add the 64 NCAA teams and customize your March Madness bracket.',
+    'world-cup': 'Add the 32 national teams and design your World Cup bracket.',
   };
   const isLockedVariant = variant in VARIANT_TITLES;
   const headingText = VARIANT_TITLES[variant] || 'Create Your Bracket';
@@ -134,14 +146,12 @@ export default function SetupPanel({
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-8">
+    <div className="max-w-3xl mx-auto py-8">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold mb-2" style={{ color: theme.text }}>
           {headingText}
         </h2>
-        <p style={{ color: theme.textMuted }}>
-          Add participants, choose bracket type, and customize the look
-        </p>
+        <p style={{ color: theme.textMuted }}>{VARIANT_SUBTITLES[variant] || 'Add participants, choose bracket type, and customize the look'}</p>
         {typeof introHtml === 'string' && introHtml.trim() !== '' && (
           <IntroCopy html={introHtml} theme={theme} />
         )}

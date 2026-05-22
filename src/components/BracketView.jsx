@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import BracketRound from './BracketRound';
 import BracketConnectors from './BracketConnectors';
 import { Pill, TeamSlot } from './MatchCard';
@@ -25,7 +25,7 @@ function computeBracketSizing(firstRoundMatchCount, layout, bracketType) {
     if (firstRoundMatchCount <= 4) return { cardW: 200, padY: 14, baseGap: 48, roundW: 240 };
     if (firstRoundMatchCount <= 8) return { cardW: 170, padY: 10, baseGap: 12, roundW: 200 };
     if (firstRoundMatchCount <= 16) return { cardW: 150, padY: 8, baseGap: 6, roundW: 180 };
-    return { cardW: 150, padY: 3, baseGap: 2, roundW: 240 };
+    return { cardW: 170, padY: 3, baseGap: 2, roundW: 240 };
   }
   if (bracketType === 'double') {
     if (firstRoundMatchCount <= 4) return { cardW: 200, padY: 12, baseGap: 32, roundW: 240 };
@@ -326,7 +326,7 @@ function ChampionFooter({ finals, theme, sizing, bracketStyle }) {
       <span
         style={{
           marginTop: '6px',
-          fontSize: '10px',
+          fontSize: '13px',
           letterSpacing: '0.15em',
           fontWeight: 600,
           color: theme.textMuted || theme.text,
@@ -602,7 +602,7 @@ function DoubleBracketStacked({ doubleBracket, theme, onAdvanceWinner, sizing, s
         {/* Winners block — grows to fill available vertical space */}
         <div className="flex flex-col min-h-0 overflow-hidden" style={{ flex: '1 0 auto' }}>
           <div className="px-1 shrink-0 mb-0.5 relative z-[2]">
-            <Pill text="Winners Bracket" color={theme.accent} bg={theme.accent + '15'} fontSize={8} paddingX={8} />
+            <Pill text="Winners Bracket" color={theme.accent} bg={theme.accent + '15'} fontSize={11} paddingX={8} />
           </div>
           <div className="relative flex items-stretch gap-0 flex-1 min-h-0" ref={winnersRef}>
             <BracketConnectors containerRef={winnersRef} rounds={doubleBracket.winnersRounds} theme={theme} bracketStyle={bracketStyle} />
@@ -627,7 +627,7 @@ function DoubleBracketStacked({ doubleBracket, theme, onAdvanceWinner, sizing, s
         {/* Losers block — grows to fill available vertical space */}
         <div className="flex flex-col min-h-0 overflow-hidden" style={{ flex: '1 0 auto' }}>
           <div className="px-1 shrink-0 mb-0.5 relative z-[2]">
-            <Pill text="Losers Bracket" color={theme.textMuted} bg={theme.textMuted + '15'} fontSize={8} paddingX={8} />
+            <Pill text="Losers Bracket" color={theme.textMuted} bg={theme.textMuted + '15'} fontSize={11} paddingX={8} />
           </div>
           <div className="relative flex items-stretch gap-0 flex-1 min-h-0" ref={losersRef}>
             <BracketConnectors containerRef={losersRef} rounds={doubleBracket.losersRounds} theme={theme} bracketStyle={bracketStyle} />
@@ -689,8 +689,8 @@ function DoubleBracketSideway({ doubleBracket, theme, onAdvanceWinner, sizing, s
   return (
     <div className="flex flex-col w-full h-full">
       <div className="flex justify-between items-center mb-0.5 px-1 shrink-0">
-        <Pill text="Winners Bracket" color={theme.accent} bg={theme.accent + '15'} fontSize={8} paddingX={8} />
-        <Pill text="Losers Bracket" color={theme.textMuted} bg={theme.textMuted + '15'} fontSize={8} paddingX={8} />
+        <Pill text="Winners Bracket" color={theme.accent} bg={theme.accent + '15'} fontSize={11} paddingX={8} />
+        <Pill text="Losers Bracket" color={theme.textMuted} bg={theme.textMuted + '15'} fontSize={11} paddingX={8} />
       </div>
 
       {/* Side-by-side: Winners (L→R) | GF (center) | Losers (R→L).
@@ -796,6 +796,118 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
   const teamCount = firstRound.length * 2;
   const useScrollMode = bracketType === 'single' && teamCount > 32;
 
+  // === Zoom controls (scroll mode only; harmless when not in scroll mode) ===
+  // Hooks must run unconditionally on every render (Rules of Hooks), so they live
+  // here BEFORE the `if (useScrollMode) return ...` early-return below.
+  //
+  // The zoom transform is applied to a WRAPPER around `.bracket-container`, not to
+  // `.bracket-container` itself, so the export pipeline (ExportButtons → toCanvas
+  // on `.bracket-container`) continues to rasterize natural-size content regardless
+  // of preview zoom level. data-auto-scale on the transform wrapper lets the
+  // existing SVG connector code (BracketConnectors / FinalsConnectors / spine in
+  // MatchCard) compensate for the transform when computing line positions.
+  const [zoom, setZoom] = useState(1);
+  const ZOOM_MIN = 0.5;
+  const ZOOM_MAX = 2;
+  const ZOOM_STEP = 0.25;
+  const clampZoom = (z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+
+  // zoomContentRef points at the (un-zoomed) transform wrapper's natural-size box.
+  // We measure its scrollWidth/Height so the outer sizer div can grow with zoom —
+  // CSS `transform: scale()` does NOT extend layout/scroll bounds on its own, so
+  // without an explicit sizer the user can't pan beyond the original viewport.
+  const zoomContentRef = useRef(null);
+  const [zoomContentSize, setZoomContentSize] = useState({ width: 0, height: 0 });
+
+  // scrollContainerRef points at the outer overflow:auto scroll container. We
+  // attach `wheel` + `touchmove` listeners to this element natively via useEffect
+  // (see below) because React 17+ registers JSX onWheel/onTouchMove as PASSIVE
+  // listeners — those cannot preventDefault(), which we need to block the browser's
+  // native ctrl+wheel page zoom and 2-finger pinch zoom from hijacking the gesture.
+  const scrollContainerRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!useScrollMode) return;
+    if (!zoomContentRef.current) return;
+    const measure = () => {
+      const el = zoomContentRef.current;
+      if (!el) return;
+      setZoomContentSize({ width: el.scrollWidth, height: el.scrollHeight });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(zoomContentRef.current);
+    return () => ro.disconnect();
+  }, [useScrollMode, bracketType, layout, allRounds.length, effectiveCount]);
+
+  // Pinch tracking for 2-finger touch gestures (mobile).
+  const pinchStateRef = useRef({ initialDistance: null, initialZoom: 1 });
+
+  // Wheel + touchmove handlers attached natively (not via JSX) because React
+  // registers these as passive listeners by default in React 17+ — passive
+  // listeners cannot call preventDefault(), which we need to block the
+  // browser's native ctrl+wheel page zoom and 2-finger pinch zoom from
+  // hijacking the gesture. touchstart/touchend stay on JSX because they
+  // don't preventDefault and don't need the passive: false escape hatch.
+  //
+  // Dep array intentionally excludes `zoom`: the handlers use setZoom's
+  // functional-update form (z => ...) and read pinch state from a ref, so
+  // they don't capture `zoom` by closure. Re-attaching listeners on every
+  // zoom change would cause churn and could drop gestures mid-pinch.
+  useEffect(() => {
+    if (!useScrollMode) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    // Touchpad pinch arrives as wheel + ctrlKey on macOS/Chromium — emulating
+    // the browser's native page-zoom gesture. We intercept and apply locally.
+    const wheelHandler = (e) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        setZoom(z => clampZoom(z - e.deltaY * 0.01));
+      }
+    };
+
+    const touchMoveHandler = (e) => {
+      if (e.touches.length === 2 && pinchStateRef.current.initialDistance) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const currentDistance = Math.hypot(dx, dy);
+        const scaleRatio = currentDistance / pinchStateRef.current.initialDistance;
+        setZoom(clampZoom(pinchStateRef.current.initialZoom * scaleRatio));
+      }
+    };
+
+    el.addEventListener('wheel', wheelHandler, { passive: false });
+    el.addEventListener('touchmove', touchMoveHandler, { passive: false });
+
+    return () => {
+      el.removeEventListener('wheel', wheelHandler);
+      el.removeEventListener('touchmove', touchMoveHandler);
+    };
+  }, [useScrollMode]);
+
+  // touchstart/touchend stay on JSX: they don't preventDefault, so React's
+  // passive-listener default is fine. touchstart RECORDS pinch start state;
+  // touchend CLEARS it. The active gesture itself (touchmove) is in useEffect.
+  const onZoomTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchStateRef.current = {
+        initialDistance: Math.hypot(dx, dy),
+        initialZoom: zoom,
+      };
+    }
+  };
+
+  const onZoomTouchEnd = (e) => {
+    if (e.touches.length < 2) {
+      pinchStateRef.current.initialDistance = null;
+    }
+  };
+
   // Shared bracket content (same for both render paths, just AutoScaleWrapper differs).
   // DoubleSidedBracket receives `scrollMode` so it can drop the `h-full`/`flex-1`
   // height chain when there is no AutoScaleWrapper providing a definite parent height.
@@ -818,19 +930,108 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
     // renders at natural size with overflow:visible so export (html2canvas on
     // .bracket-container) captures the full bracket without any clipping.
     // No aspectRatio, no fixed height, no AutoScaleWrapper.
+    //
+    // Zoom architecture (Stuart 2026-05 feedback round 2):
+    //   <relative root>
+    //     <sticky zoom bar>      ← +/-/reset; pointer-events:none on bar, auto on buttons
+    //     <scroll container>     ← overflow:auto + onWheel/onTouch* for pinch
+    //       <sizer>              ← width/height = natural * zoom (extends scroll bounds)
+    //         <transform wrap>   ← transform:scale(zoom), data-auto-scale=zoom for SVG
+    //           <.bracket-container>  ← UNCHANGED; ExportButtons reads this at natural size
+    //
+    // Critical: zoom transform is on the WRAPPER, never on .bracket-container itself,
+    // so ExportButtons → toCanvas captures natural-size content regardless of preview
+    // zoom. data-auto-scale={zoom} lets SVG connectors (BracketConnectors,
+    // FinalsConnectors, MatchCard spine) compensate the transform when computing
+    // pixel positions via el.closest('[data-auto-scale]').
+    const zoomBtnStyle = {
+      width: 36, height: 36, border: '1px solid #d1d5db', background: '#ffffff',
+      borderRadius: 6, fontSize: 18, fontWeight: 600, cursor: 'pointer',
+      color: '#374151', boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    };
+    const zoomLabelStyle = {
+      ...zoomBtnStyle, width: 'auto', minWidth: 60, padding: '0 10px', fontSize: 14,
+    };
+
     return (
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 160px)', maxWidth: '100%' }}>
+      <div style={{ position: 'relative' }}>
+        {/* Sticky zoom control bar — sits visually inside the scroll container's
+            top-right corner. marginBottom:-44 pulls the next element up so the bar
+            overlays the bracket instead of pushing it down. pointerEvents:none on
+            the bar lets clicks pass through to the bracket; pointerEvents:auto on
+            the inner button group restores clicks for the buttons themselves. */}
+        <div style={{
+          position: 'sticky', top: 8, zIndex: 50,
+          display: 'flex', justifyContent: 'flex-end',
+          gap: 6, marginBottom: -44, pointerEvents: 'none', paddingRight: 12,
+        }}>
+          <div style={{ display: 'flex', gap: 6, pointerEvents: 'auto' }}>
+            <button onClick={() => setZoom(z => clampZoom(z - ZOOM_STEP))}
+                    disabled={zoom <= ZOOM_MIN} style={zoomBtnStyle} aria-label="Zoom out">−</button>
+            <button onClick={() => setZoom(1)} style={zoomLabelStyle}
+                    aria-label="Reset zoom" title="Reset zoom">{Math.round(zoom * 100)}%</button>
+            <button onClick={() => setZoom(z => clampZoom(z + ZOOM_STEP))}
+                    disabled={zoom >= ZOOM_MAX} style={zoomBtnStyle} aria-label="Zoom in">+</button>
+          </div>
+        </div>
+
+        {/* Scroll container — touchAction pan-x pan-y allows native panning while
+            our touch handlers take over for 2-finger pinch (we call preventDefault
+            inside the native touchmove handler only when 2 fingers are down).
+            wheel + touchmove are attached natively in the useEffect above (passive:
+            false) so preventDefault() actually works — React 17+ would otherwise
+            register JSX onWheel/onTouchMove as passive and silently ignore our
+            preventDefault calls, letting the browser hijack the gesture with its
+            native ctrl+wheel page zoom / 2-finger pinch zoom. */}
         <div
-          className="bracket-container rounded-2xl mx-auto flex flex-col"
+          ref={scrollContainerRef}
+          onTouchStart={onZoomTouchStart}
+          onTouchEnd={onZoomTouchEnd}
           style={{
-            background: theme.bg,
-            border: `1px solid ${theme.cardBorder}`,
-            overflow: 'visible',
-            display: 'inline-flex', // size to natural content width
+            overflow: 'auto',
+            maxHeight: 'calc(100vh - 160px)',
+            maxWidth: '100%',
+            touchAction: 'pan-x pan-y',
           }}
         >
-          <div className="p-[14px] flex flex-col">
-            {bracketContent}
+          {/* Sizer — explicit width/height = natural * zoom so the scroll container's
+              scrollbars extend when zoomed in. CSS transform:scale() alone does NOT
+              affect layout/scroll bounds (the element occupies its original box from
+              the scroll container's point of view), so without this sizer the user
+              could not pan around a 200%-zoomed bracket. */}
+          <div style={{
+            width: zoomContentSize.width > 0 ? zoomContentSize.width * zoom : 'auto',
+            height: zoomContentSize.height > 0 ? zoomContentSize.height * zoom : 'auto',
+          }}>
+            {/* Transform wrapper — applies the actual scale and advertises the
+                current zoom factor via data-auto-scale so SVG connectors compensate
+                when reading getBoundingClientRect (which returns POST-transform pixel
+                coords). transformOrigin:'0 0' (top-left) keeps the sizer math simple:
+                scaled box bottom-right == natural box bottom-right * zoom. */}
+            <div
+              ref={zoomContentRef}
+              data-auto-scale={zoom}
+              style={{
+                transform: `scale(${zoom})`,
+                transformOrigin: '0 0',
+                display: 'inline-block',
+              }}
+            >
+              <div
+                className="bracket-container rounded-2xl mx-auto flex flex-col"
+                style={{
+                  background: theme.bg,
+                  border: `1px solid ${theme.cardBorder}`,
+                  overflow: 'visible',
+                  display: 'inline-flex', // size to natural content width
+                }}
+              >
+                <div className="p-[14px] flex flex-col">
+                  {bracketContent}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
