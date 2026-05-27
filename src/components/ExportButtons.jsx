@@ -28,7 +28,7 @@ const LETTER_PX_H = 2550;
 //   = 9 → 4) for ~2-3× faster export. 200 DPI is still print-quality at
 //   Letter size (2200×1700 px on the captured bracket, well above
 //   visible-detail thresholds for printed brackets).
-export default function ExportButtons({ bracketRef, title, theme, printMargin = 0 }) {
+export default function ExportButtons({ bracketRef, title, theme, printMargin = 0, variant = '' }) {
   // Tracks which export (if any) is in progress so the buttons can show a
   // spinner + "Exporting…" label and disable both buttons. Without this,
   // users assumed the export was broken during the 30s-4min delay and
@@ -39,6 +39,14 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
   // not just the embedded tool. role="alert" on the rendered node lets
   // screen readers announce the failure.
   const [exportError, setExportError] = useState(null);
+
+  // Download filename: variant brackets get descriptive names; otherwise fall back to
+  // the (lowercased) title so standard single-elim exports as tournament_bracket.
+  const FILENAME_BY_VARIANT = {
+    'march-madness': 'march_madness_bracket',
+    'world-cup': 'world_cup_bracket',
+  };
+  const baseName = FILENAME_BY_VARIANT[variant] || title.replace(/\s+/g, '_').toLowerCase();
 
   // WYSIWYG: capture bracketRef exactly as rendered. Never mutate the live DOM
   // before capture — hiding the header or changing sizes triggers
@@ -89,7 +97,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       ctx.drawImage(canvas, x, y, imgW, imgH);
 
       const link = document.createElement('a');
-      link.download = `${title.replace(/\s+/g, '_')}.png`;
+      link.download = `${baseName}.png`;
       link.href = page.toDataURL('image/png');
       link.click();
     } catch (err) {
@@ -138,7 +146,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       const x = (PAGE_W - imgW) / 2;
       const y = (PAGE_H - imgH) / 2;
       pdf.addImage(imgData, 'PNG', x, y, imgW, imgH);
-      pdf.save(`${title.replace(/\s+/g, '_')}.pdf`);
+      pdf.save(`${baseName}.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
       let userMsg;

@@ -245,7 +245,7 @@ export default function App({ initialTheme = '', variant = '', feedbackUrl = nul
             <AdSlot html={adMidHtml} position="mid" />
 
             <div className="flex justify-center mt-6 no-print">
-              <ExportButtons bracketRef={bracketRef} title={title} theme={theme} printMargin={printMargin} />
+              <ExportButtons bracketRef={bracketRef} title={title} theme={theme} printMargin={printMargin} variant={variant} />
             </div>
 
             {feedbackUrl && (
