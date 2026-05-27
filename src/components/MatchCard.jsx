@@ -42,7 +42,7 @@ function SeedBadge({ seed, theme, isWinner, isLine }) {
   );
 }
 
-function Pill({ text, color, bg, fontSize = 11, paddingX = 14, marginBottom = 0 }) {
+function Pill({ text, color, bg, fontSize = 11, fontWeight = 700, paddingX = 14, marginBottom = 0 }) {
   // SVG-based pill label with precise text centering. Approximates text width
   // by char count (sans-serif uppercase ≈ 0.7em per char).
   const charW = fontSize * 0.7;
@@ -64,7 +64,7 @@ function Pill({ text, color, bg, fontSize = 11, paddingX = 14, marginBottom = 0 
         y={BASELINE_Y}
         textAnchor="middle"
         fontSize={fontSize}
-        fontWeight="700"
+        fontWeight={fontWeight}
         letterSpacing="0.6"
         fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
         fill={color}

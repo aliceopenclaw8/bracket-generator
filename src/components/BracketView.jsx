@@ -602,7 +602,7 @@ function DoubleBracketStacked({ doubleBracket, theme, onAdvanceWinner, sizing, s
         {/* Winners block — grows to fill available vertical space */}
         <div className="flex flex-col min-h-0 overflow-hidden" style={{ flex: '1 0 auto' }}>
           <div className="px-1 shrink-0 mb-0.5 relative z-[2]">
-            <Pill text="Winners Bracket" color={theme.accent} bg={theme.accent + '15'} fontSize={11} paddingX={8} />
+            <Pill text="Winners Bracket" color={theme.accent} bg={theme.accent + '15'} fontSize={14} fontWeight={400} paddingX={8} />
           </div>
           <div className="relative flex items-stretch gap-0 flex-1 min-h-0" ref={winnersRef}>
             <BracketConnectors containerRef={winnersRef} rounds={doubleBracket.winnersRounds} theme={theme} bracketStyle={bracketStyle} />
@@ -627,7 +627,7 @@ function DoubleBracketStacked({ doubleBracket, theme, onAdvanceWinner, sizing, s
         {/* Losers block — grows to fill available vertical space */}
         <div className="flex flex-col min-h-0 overflow-hidden" style={{ flex: '1 0 auto' }}>
           <div className="px-1 shrink-0 mb-0.5 relative z-[2]">
-            <Pill text="Losers Bracket" color={theme.textMuted} bg={theme.textMuted + '15'} fontSize={11} paddingX={8} />
+            <Pill text="Losers Bracket" color={theme.textMuted} bg={theme.textMuted + '15'} fontSize={14} fontWeight={400} paddingX={8} />
           </div>
           <div className="relative flex items-stretch gap-0 flex-1 min-h-0" ref={losersRef}>
             <BracketConnectors containerRef={losersRef} rounds={doubleBracket.losersRounds} theme={theme} bracketStyle={bracketStyle} />
@@ -689,8 +689,8 @@ function DoubleBracketSideway({ doubleBracket, theme, onAdvanceWinner, sizing, s
   return (
     <div className="flex flex-col w-full h-full">
       <div className="flex justify-between items-center mb-0.5 px-1 shrink-0">
-        <Pill text="Winners Bracket" color={theme.accent} bg={theme.accent + '15'} fontSize={11} paddingX={8} />
-        <Pill text="Losers Bracket" color={theme.textMuted} bg={theme.textMuted + '15'} fontSize={11} paddingX={8} />
+        <Pill text="Winners Bracket" color={theme.accent} bg={theme.accent + '15'} fontSize={14} fontWeight={400} paddingX={8} />
+        <Pill text="Losers Bracket" color={theme.textMuted} bg={theme.textMuted + '15'} fontSize={14} fontWeight={400} paddingX={8} />
       </div>
 
       {/* Side-by-side: Winners (L→R) | GF (center) | Losers (R→L).
@@ -787,14 +787,18 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
     : firstRound.length || 4;
   const sizing = computeBracketSizing(effectiveCount, layout, bracketType);
 
-  // For large single-elim brackets (>32 teams), skip the Letter-aspect-lock and
-  // AutoScaleWrapper so the content renders at natural size in a scrollable parent.
-  // 64-team brackets have 32 matches in round 0 → firstRound.length * 2 = 64 teams.
-  // Threshold is STRICTLY >32: 32-team brackets (16 matches in round 0) keep the
-  // current aspect-locked + AutoScaleWrapper path. Double-elim is always excluded —
-  // its stacked/sideway layouts are already sized for the Letter frame.
+  // Scroll mode (natural size + zoom + scroll) activates for SINGLE-elim brackets with
+  // 32+ teams, which render well over a full Letter-width at natural size — so the
+  // export pipeline scales them DOWN to fit (clean output). Smaller brackets fit the
+  // frame and stay on the AutoScaleWrapper path; forcing them into scroll mode would
+  // letterbox them (tiny content on a big page).
+  //
+  // Double-elim is intentionally excluded: its DoubleBracketStacked/Sideway layouts
+  // hard-code `h-full` roots that collapse to a thin strip without AutoScaleWrapper's
+  // definite parent height, and (unlike DoubleSidedBracket) were never adapted to take
+  // a scrollMode prop. They stay on the aspect-locked path that sizes them correctly.
   const teamCount = firstRound.length * 2;
-  const useScrollMode = bracketType === 'single' && teamCount > 32;
+  const useScrollMode = bracketType === 'single' && teamCount >= 32;
 
   // === Zoom controls (scroll mode only; harmless when not in scroll mode) ===
   // Hooks must run unconditionally on every render (Rules of Hooks), so they live
@@ -807,7 +811,7 @@ export default function BracketView({ bracket, doubleBracket, bracketType, brack
   // existing SVG connector code (BracketConnectors / FinalsConnectors / spine in
   // MatchCard) compensate for the transform when computing line positions.
   const [zoom, setZoom] = useState(1);
-  const ZOOM_MIN = 0.5;
+  const ZOOM_MIN = 0.25;
   const ZOOM_MAX = 2;
   const ZOOM_STEP = 0.25;
   const clampZoom = (z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
