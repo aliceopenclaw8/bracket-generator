@@ -173,7 +173,7 @@ export default function App({ initialTheme = '', variant = '', feedbackUrl = nul
     // theme.bg (it reads .bracket-container, not this outer div) — unaffected.
     <div style={{ background: isGenerated ? theme.bg : '#ffffff', color: theme.text, minHeight: '100vh' }}
          className="transition-colors duration-300">
-      <div className="max-w-screen-2xl mx-auto px-4 pb-12">
+      <div className={`max-w-screen-2xl mx-auto px-4 ${isGenerated ? 'pb-12' : 'pb-2'}`}>
         {!isGenerated ? (
           <SetupPanel
             participantNames={participantNames}

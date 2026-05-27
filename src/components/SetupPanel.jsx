@@ -18,7 +18,7 @@ import { shuffleArray } from '../utils/shuffle';
  * plain innerHTML assignment. Unlike AdSlot we do NOT re-execute <script> tags —
  * wp_kses_post already removed them, and intro copy never needs to run scripts.
  */
-function IntroCopy({ html, theme }) {
+function IntroCopy({ html }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -32,13 +32,17 @@ function IntroCopy({ html, theme }) {
       ref={ref}
       className="bracket-intro-copy mx-auto text-sm leading-relaxed"
       style={{
-        background: theme.headerBg || '#1A2B5C',
-        color: '#ffffff',
+        // White bg + black text is theme-independent so the callout stays readable on
+        // any page/theme (fixes prior white-on-light-theme invisibility). The subtle
+        // border keeps the white box visible against the white setup background.
+        background: '#ffffff',
+        color: '#000000',
+        border: '1px solid #e5e7eb',
         padding: '1rem 1.25rem',
         borderRadius: '8px',
         marginTop: '1rem',
         marginBottom: '1rem',
-        maxWidth: '36rem',
+        maxWidth: '100%',
       }}
     />
   );
@@ -146,14 +150,14 @@ export default function SetupPanel({
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-8">
+    <div className="max-w-3xl mx-auto pt-4 pb-2">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold mb-2" style={{ color: theme.text }}>
           {headingText}
         </h2>
         <p style={{ color: theme.textMuted }}>{VARIANT_SUBTITLES[variant] || 'Add participants, choose bracket type, and customize the look'}</p>
         {typeof introHtml === 'string' && introHtml.trim() !== '' && (
-          <IntroCopy html={introHtml} theme={theme} />
+          <IntroCopy html={introHtml} />
         )}
       </div>
 
