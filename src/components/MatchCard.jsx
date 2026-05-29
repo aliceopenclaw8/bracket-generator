@@ -117,8 +117,12 @@ export function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketSt
         borderRadius: '8px',
       };
 
-  // No overflow:hidden — that's what was clipping descenders in html2canvas.
-  // Long names will overflow the card horizontally, but for "Team 1"-"Team 99" they fit fine.
+  // Long names WRAP to multiple lines (whiteSpace:'normal') instead of spilling past
+  // the box's right edge; overflowWrap:'break-word' also breaks a single very long
+  // word. The box grows taller to fit — intended and approved. Do NOT add
+  // overflow:hidden/textOverflow here: it clipped letter descenders (g/p/y) during the
+  // canvas-based PNG/PDF export (html2canvas originally; still avoid it with the
+  // current html-to-image exporter).
   const nameStyle = isLine
     ? {
         flex: '1 1 0',
@@ -126,7 +130,8 @@ export function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketSt
         fontSize: '17px',
         fontWeight: isWinner ? 700 : isEmpty ? 400 : 500,
         color: isWinner ? theme.accent : isEmpty ? 'transparent' : theme.text,
-        whiteSpace: 'nowrap',
+        whiteSpace: 'normal',
+        overflowWrap: 'break-word',
         lineHeight: 1.5,
       }
     : {
@@ -135,7 +140,8 @@ export function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketSt
         fontSize: '17px',
         fontWeight: 500,
         color: isWinner ? theme.winnerText : isEmpty ? theme.textMuted : theme.text,
-        whiteSpace: 'nowrap',
+        whiteSpace: 'normal',
+        overflowWrap: 'break-word',
         lineHeight: 1.5,
         opacity: isEmpty ? 0.2 : 1,
       };
