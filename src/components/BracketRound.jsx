@@ -21,7 +21,9 @@ export default function BracketRound({
     // flex:1 so rounds grow to fill the stretched parent width instead of leaving gaps.
     // minWidth preserves legibility at small counts; flex-grow absorbs extra space.
     <div className="flex flex-col items-center" style={{ minWidth: `${roundW}px`, flex: '1 1 0' }}>
-      {roundLabel && <Pill text={roundLabel} color={theme.roundLabel} bg={theme.roundLabel + '15'} fontSize={14} fontWeight={400} paddingX={8} marginBottom={6} />}
+      {/* marginBottom=16 (not 6) gives the green ROUND pill clear breathing room above
+          the first match box; 6px read as cramped/attached to the box below it. */}
+      {roundLabel && <Pill text={roundLabel} color={theme.roundLabel} bg={theme.roundLabel + '15'} fontSize={14} fontWeight={400} paddingX={8} marginBottom={16} />}
       {/* rowGap = inter-match gap; identical baseGap across rounds keeps connector Y-alignment. */}
       <div
         className="flex flex-col justify-around flex-1"
