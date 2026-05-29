@@ -451,6 +451,22 @@ export default function SetupPanel({
                             <input
                               value={name}
                               onChange={(e) => handleNameChange(index, e.target.value)}
+                              // WHY: pre-filled defaults ("Team N") are annoying to clear manually,
+                              // so onFocus auto-clears the field when it still holds an untouched
+                              // default. We match ANY `Team <number>` (regex) — not just this slot's
+                              // `Team ${index+1}` — so auto-clear keeps working after drag-reorder or
+                              // Randomize moves a default like "Team 8" into another slot (a
+                              // slot-specific check silently stopped clearing those). A real custom
+                              // name ("Brazil") won't match, so it's preserved. onBlur restores this
+                              // slot's positional default if left empty, so no empty boxes ship.
+                              // Tradeoff: literally typing "Team 47" into any slot clears it on
+                              // refocus — negligible for real team/country names.
+                              onFocus={() => {
+                                if (/^Team \d+$/.test(name)) handleNameChange(index, '');
+                              }}
+                              onBlur={() => {
+                                if (name.trim() === '') handleNameChange(index, `Team ${index + 1}`);
+                              }}
                               placeholder={`Team ${index + 1}`}
                               className="flex-1 bg-transparent outline-none text-sm py-2 px-2"
                               style={{ color: theme.text }}
