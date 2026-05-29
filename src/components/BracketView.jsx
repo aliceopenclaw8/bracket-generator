@@ -406,10 +406,27 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
               aria-hidden="true"
               style={{
                 position: 'absolute',
-                top: '16%',
+                // Logo position (v1.5.0): FIXED top offset + reduced width — NOT a % top.
+                // Both variants (32-team WC, 64-team MM) render in scroll mode, so this
+                // center column stretches (items-stretch) to the full, TALL bracket height.
+                // The old `top:'16%'` scaled with that tall column (~150px+ down) while the
+                // image kept a FIXED rendered height — so the bottom of the old 180px-wide
+                // logo (~303px tall for the 173×291 WC art) reached down into the centered
+                // FINALS card and overlapped it (in preview AND the PDF, since export
+                // captures this same DOM). A fixed 16px offset decouples the logo from
+                // column height: its bottom edge is now constant regardless of team count.
+                top: '16px',
                 left: '50%',
                 transform: 'translateX(-50%)',
-                width: '180px',
+                // Width 180→125px (~30%) shortens the WC logo to ~210px tall (125 × 291/173),
+                // so its bottom edge sits ~226px from the column top. The centered FINALS
+                // card sits comfortably below that in both current variant layouts; the MM
+                // logo (461×458, ~1:1) renders ~124px tall and clears by even more.
+                // NOTE: this clearance is NOT an enforced invariant — it depends on
+                // computeBracketSizing and per-card height (the v1.5.0 name-wrap makes cards
+                // taller). If you change sizing or card content, re-verify the 32-team WC.
+                // height:'auto' preserves aspect; no maxHeight (it would clip, not scale).
+                width: '125px',
                 height: 'auto',
                 zIndex: 4,
                 pointerEvents: 'none',
