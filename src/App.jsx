@@ -173,7 +173,11 @@ export default function App({ initialTheme = '', variant = '', feedbackUrl = nul
     // theme.bg (it reads .bracket-container, not this outer div) — unaffected.
     <div style={{ background: isGenerated ? theme.bg : '#ffffff', color: theme.text, minHeight: '100vh' }}
          className="transition-colors duration-300">
-      <div className={`max-w-screen-2xl mx-auto px-4 ${isGenerated ? 'pb-12' : 'pb-2'}`}>
+      {/* pb-4 (was pb-12): trims the result-view bottom padding. A live Puppeteer measure
+          of the WC page (Tribune theme + Elementor) showed the theme adds 0px after this
+          tool — so the tool-to-text gap is ENTIRELY ours (this padding + export-row
+          spacing), NOT theme block-spacing. Reduce further here if it needs to be tighter. */}
+      <div className={`max-w-screen-2xl mx-auto px-4 ${isGenerated ? 'pb-4' : 'pb-2'}`}>
         {!isGenerated ? (
           <SetupPanel
             participantNames={participantNames}
@@ -252,6 +256,8 @@ export default function App({ initialTheme = '', variant = '', feedbackUrl = nul
               <div className="no-print flex justify-end mt-4">
                 <a
                   href={feedbackUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-sm"
                   style={{ color: theme.accent, textDecoration: 'underline' }}
                 >
