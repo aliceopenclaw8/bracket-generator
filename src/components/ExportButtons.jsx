@@ -98,7 +98,14 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
 
       const link = document.createElement('a');
       link.download = `${baseName}.png`;
-      link.href = page.toDataURL('image/png');
+      // Guard: an oversized canvas (exceeds the browser's max-area limit; Safari ~16.7MP
+      // is tightest) makes toDataURL return 'data:,' instead of throwing — which would
+      // silently download a blank/corrupt file. Surface it via the visible error UI.
+      const imgData = page.toDataURL('image/png');
+      if (!imgData || imgData === 'data:,' || imgData.length < 100) {
+        throw new Error('Bracket too large to export — try fewer teams or a smaller layout.');
+      }
+      link.href = imgData;
       link.click();
     } catch (err) {
       console.error('PNG export failed:', err);
@@ -109,6 +116,8 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
         userMsg = 'Bracket is not fully rendered yet — wait a moment and try again.';
       } else if (err.message?.includes('empty')) {
         userMsg = 'The bracket appears empty. Try regenerating it before exporting.';
+      } else if (err.message?.includes('too large')) {
+        userMsg = 'Bracket too large to export — try fewer teams or a smaller layout.';
       } else {
         userMsg = `Export failed: ${err.message || 'Unknown error'}. Please try again.`;
       }
@@ -131,11 +140,27 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       await document.fonts.ready;
       const target = bracketRef.current?.querySelector('.bracket-container');
       if (!target) throw new Error('Bracket not ready — try regenerating');
+      // captureOptions already paints an opaque backgroundColor (theme.bg), so the
+      // captured canvas has no transparent regions — safe to embed as JPEG (which has
+      // no alpha channel) without forcing a white background. Keeps the PDF background
+      // identical to the PNG export for every theme.
       const canvas = await toCanvas(target, captureOptions);
       if (canvas.width === 0 || canvas.height === 0) {
         throw new Error('Rendered canvas is empty');
       }
-      const imgData = canvas.toDataURL('image/png');
+      // Use JPEG (q0.92) instead of PNG for the PDF embed. PNG is lossless, so a
+      // ~9.6 MP flat bracket graphic (e.g. ≈4000×2400 = DOM size × pixelRatio:2) balloons to
+      // ~27 MB — over Gmail's 25 MB attachment limit. JPEG q0.92 compresses the
+      // same flat graphic ~5-8× smaller while looking essentially identical for
+      // brackets (large solid fills, no photographic gradients), so the PDF
+      // emails fine. pixelRatio:2 is kept unchanged to preserve print sharpness.
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      // Guard: an oversized canvas (exceeds the browser's max-area limit; Safari ~16.7MP
+      // is tightest) makes toDataURL return 'data:,' instead of throwing — jsPDF then
+      // embeds empty data and silently saves a blank/corrupt PDF. Surface it instead.
+      if (!imgData || imgData === 'data:,' || imgData.length < 100) {
+        throw new Error('Bracket too large to export — try fewer teams or a smaller layout.');
+      }
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'in', format: 'letter' });
       const margin = printMargin;
       const maxW = PAGE_W - margin * 2;
@@ -145,7 +170,7 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
       const imgH = canvas.height * ratio;
       const x = (PAGE_W - imgW) / 2;
       const y = (PAGE_H - imgH) / 2;
-      pdf.addImage(imgData, 'PNG', x, y, imgW, imgH);
+      pdf.addImage(imgData, 'JPEG', x, y, imgW, imgH);
       pdf.save(`${baseName}.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
@@ -156,6 +181,8 @@ export default function ExportButtons({ bracketRef, title, theme, printMargin = 
         userMsg = 'Bracket is not fully rendered yet — wait a moment and try again.';
       } else if (err.message?.includes('empty')) {
         userMsg = 'The bracket appears empty. Try regenerating it before exporting.';
+      } else if (err.message?.includes('too large')) {
+        userMsg = 'Bracket too large to export — try fewer teams or a smaller layout.';
       } else {
         userMsg = `Export failed: ${err.message || 'Unknown error'}. Please try again.`;
       }
