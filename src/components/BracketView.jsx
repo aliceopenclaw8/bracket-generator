@@ -406,20 +406,34 @@ function DoubleSidedBracket({ bracket, theme, onAdvanceWinner, sizing, showSeeds
               aria-hidden="true"
               style={{
                 position: 'absolute',
-                // Logo position (v1.5.0): FIXED top offset + reduced width — NOT a % top.
+                // Logo position: FIXED top offset + reduced width — NOT a % top.
                 // Both variants (32-team WC, 64-team MM) render in scroll mode, so this
                 // center column stretches (items-stretch) to the full, TALL bracket height.
                 // The old `top:'16%'` scaled with that tall column (~150px+ down) while the
                 // image kept a FIXED rendered height — so the bottom of the old 180px-wide
                 // logo (~303px tall for the 173×291 WC art) reached down into the centered
                 // FINALS card and overlapped it (in preview AND the PDF, since export
-                // captures this same DOM). A fixed 16px offset decouples the logo from
+                // captures this same DOM). A fixed top offset decouples the logo from
                 // column height: its bottom edge is now constant regardless of team count.
-                top: '16px',
+                //
+                // top 16px → 60px: the center column's FIRST in-flow child is
+                // BracketRound's round-label "FINALS" pill, which occupies y=0..50px from
+                // the column top — pill SVG height = ceil(14*2.4) = 34px (Pill fontSize 14)
+                // PLUS BracketRound's marginBottom={16} (34+16=50). At top:16px the logo's
+                // top edge landed at y=16, INSIDE that 0..34 pill, overlapping the FINALS
+                // text. top:60px clears the full 50px pill block with a ~10px buffer.
+                // This does NOT introduce a bottom overlap: the champion stack (CHAMPS pill /
+                // champion box / FINALS pill / team slots) is vertically centered by
+                // BracketRound's `justify-around flex-1`, sitting hundreds of px below the
+                // logo's new bottom edge (WC: 60+210≈270px; MM: 60+124≈184px) in both tall
+                // variant layouts. Both variants share this single top/width, so the 44px
+                // downshift applies identically to each. Re-verify if computeBracketSizing,
+                // card content, or the Pill fontSize/marginBottom change.
+                top: '60px',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 // Width 180→125px (~30%) shortens the WC logo to ~210px tall (125 × 291/173),
-                // so its bottom edge sits ~226px from the column top. The centered FINALS
+                // so its bottom edge sits ~270px from the column top (60 top + 210 tall). The centered FINALS
                 // card sits comfortably below that in both current variant layouts; the MM
                 // logo (461×458, ~1:1) renders ~124px tall and clears by even more.
                 // NOTE: this clearance is NOT an enforced invariant — it depends on
