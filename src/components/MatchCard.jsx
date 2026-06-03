@@ -100,6 +100,9 @@ export function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketSt
         paddingTop: `${padY + 4}px`,
         paddingBottom: `${padY + 8}px`,
         borderBottom: `2px solid ${theme.connector}`,
+        // Line mode has no box to fill, so the World Cup green champion treatment
+        // (position==='champion' → championBg) is boxed-mode only; here the champion
+        // renders via ChampionFooter as a flat line and green is intentionally not applied.
       }
     : {
         display: 'flex',
@@ -111,8 +114,20 @@ export function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketSt
         paddingBottom: `${padY + 8}px`,
         // Each slot is now a fully self-contained card (full border, all corners rounded)
         // so the parent wrapper can space them with a gap between the two boxes.
-        // No fill color on championship slots — emphasis is the 4px accent border alone.
-        background: isWinner ? theme.winnerBg : theme.cardBg,
+        // Champion box (position==='champion', the final CHAMPS slot) gets a distinct
+        // green fill so it reads as THE winner, set apart from every intermediate-round
+        // winner which keeps the gold/yellow winnerBg. Scoped to position==='champion'
+        // (not just isWinner && isChampionship) on purpose: the winning FINALS slot is
+        // also isWinner && isChampionship, but it must stay gold like other round winners.
+        // theme.championBg only exists on the World Cup theme; every other theme falls
+        // back to winnerBg, so this is a no-op for March Madness etc.
+        background: position === 'champion'
+          ? (theme.championBg || theme.winnerBg)
+          : (isWinner ? theme.winnerBg : theme.cardBg),
+        // Championship slots keep their 4px theme.accent border. On the green champion
+        // fill that accent is gold (#FFCC00), so the gold border now frames the green box
+        // and keeps it standing out against the green-accented World Cup theme. VERIFIED:
+        // border already used theme.accent for championship (not cardBorder) — unchanged.
         border: `${isChampionship ? 4 : 1}px solid ${isChampionship ? theme.accent : theme.cardBorder}`,
         borderRadius: '8px',
       };
@@ -139,7 +154,13 @@ export function TeamSlot({ team, isWinner, onAdvance, theme, position, bracketSt
         minWidth: 0,
         fontSize: '17px',
         fontWeight: 500,
-        color: isWinner ? theme.winnerText : isEmpty ? theme.textMuted : theme.text,
+        // White champion text reads cleanly on the dark green champion fill. Scoped to
+        // position==='champion' so intermediate winners (and the gold FINALS winner slot)
+        // keep their normal winnerText. championText only exists on World Cup; all other
+        // themes fall back to winnerText, leaving them untouched.
+        color: position === 'champion'
+          ? (theme.championText || theme.winnerText)
+          : isWinner ? theme.winnerText : isEmpty ? theme.textMuted : theme.text,
         whiteSpace: 'normal',
         overflowWrap: 'break-word',
         lineHeight: 1.5,
@@ -284,11 +305,17 @@ export default function MatchCard({ match, theme, onAdvanceWinner, bracketSectio
       {isChampionship && bracketStyle !== 'line' && (
         <>
           <div style={{ marginBottom: '8px' }}>
-            <Pill text="🏆 CHAMPS" color={theme.accent} bg={theme.accent + '22'} fontSize={12} paddingX={10} />
+            {/* CHAMPS pill goes green to match the green champion box below (and the WC
+                logo green). Green text on a translucent green bg (+'22' = ~13% alpha).
+                championBg only exists on World Cup; other themes fall back to theme.accent
+                so their CHAMPS pill stays exactly as before. FINALS pill below is left on
+                theme.accent (gold) — it labels the intermediate final, not the champion. */}
+            <Pill text="🏆 CHAMPS" color={theme.championBg || theme.accent} bg={(theme.championBg || theme.accent) + '22'} fontSize={12} paddingX={10} />
           </div>
           {/* CHAMPS winner singleton: width wrapper only; TeamSlot renders its own */}
-          {/* 4px accent border via isChampionship (no fill color — same emphasis */}
-          {/* pattern as FINALS slots). data-champ-winner marks this for the spine */}
+          {/* 4px accent border via isChampionship. World Cup adds a championBg green */}
+          {/* fill here (position==='champion'); other themes have no championBg so they */}
+          {/* stay fill-less like FINALS slots. data-champ-winner marks this for the spine */}
           {/* SVG's first tap point. */}
           {/* position="champion" (not "top"/"bottom") so the spine's querySelector */}
           {/* for data-team-slot="bottom" doesn't accidentally match the winner instead of team2. */}

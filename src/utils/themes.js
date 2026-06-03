@@ -174,6 +174,14 @@ export const THEMES = {
     textMuted: '#5A6E5C',
     winnerBg: '#FFCC00',
     winnerText: '#003D1F',  // gold bg needs dark text for contrast
+    // Champion-only override (final CHAMPS box). Distinct from intermediate-round
+    // winners which stay gold/yellow (winnerBg). Green (#006633) matches the World Cup
+    // pitch/logo green; white text reads cleanly on the dark green fill. These two keys
+    // exist ONLY on this theme so every other theme falls back to winnerBg/winnerText
+    // via the (theme.championBg || theme.winnerBg) pattern in MatchCard — leaving
+    // March Madness and the rest untouched.
+    championBg: '#006633',
+    championText: '#ffffff',
     roundLabel: '#006633',
     connector: '#006633',
     headerBg: '#006633',
