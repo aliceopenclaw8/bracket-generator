@@ -175,13 +175,19 @@ export const THEMES = {
     winnerBg: '#FFCC00',
     winnerText: '#003D1F',  // gold bg needs dark text for contrast
     // Champion-only override (final CHAMPS box). Distinct from intermediate-round
-    // winners which stay gold/yellow (winnerBg). Green (#006633) matches the World Cup
-    // pitch/logo green; white text reads cleanly on the dark green fill. These two keys
-    // exist ONLY on this theme so every other theme falls back to winnerBg/winnerText
-    // via the (theme.championBg || theme.winnerBg) pattern in MatchCard — leaving
-    // March Madness and the rest untouched.
-    championBg: '#006633',
-    championText: '#ffffff',
+    // winners which stay gold/yellow (winnerBg). The champion box is UNFILLED — white
+    // background (championBg '#ffffff') so it prints clean with no ink fill — and is
+    // set apart instead by a GREEN OUTLINE (championBorder '#006633', the World Cup
+    // pitch/logo green). championBorder drives BOTH the box outline AND the CHAMPS pill
+    // color, so the pill never becomes white-on-white now that championBg is white.
+    // championText '#003D1F' is dark green so the champion name reads cleanly on the
+    // white fill. These three keys exist ONLY on this theme so every other theme falls
+    // back to winnerBg/winnerText/accent via the (theme.championBg || theme.winnerBg),
+    // (theme.championText || theme.winnerText) and (theme.championBorder || theme.accent)
+    // patterns in MatchCard — leaving March Madness and the rest untouched.
+    championBg: '#ffffff',
+    championBorder: '#006633',
+    championText: '#003D1F',
     roundLabel: '#006633',
     connector: '#006633',
     headerBg: '#006633',
